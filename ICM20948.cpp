@@ -284,7 +284,7 @@
 #define ICM20948_AK00916_REG_HXL                 0x11    /**< Magnetometer X-axis data lower byte    */
 #define ICM20948_AK00916_REG_HXH                 0x12    /**< Magnetometer X-axis data higher byte   */
 #define ICM20948_AK00916_REG_HYL                 0x13    /**< Magnetometer Y-axis data lower byte    */
-#define ICM20948_AK00916_REG_HYH                 0x14    /*< Magnetometer Y-axis data higher byte   */
+#define ICM20948_AK00916_REG_HYH                 0x14    /**< Magnetometer Y-axis data higher byte   */
 #define ICM20948_AK00916_REG_HZL                 0x15    /**< Magnetometer Z-axis data lower byte    */
 #define ICM20948_AK00916_REG_HZH                 0x16    /**< Magnetometer Z-axis data higher byte   */
 
