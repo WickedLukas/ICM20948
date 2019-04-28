@@ -1,5 +1,5 @@
 /***************************************************************************//**
- * @file ICM20648.h
+ * @file ICM20948.h
  *******************************************************************************
  * @section License
  * <b>(C) Copyright 2017 Silicon Labs, http://www.silabs.com</b>
@@ -21,25 +21,25 @@
  *
  ******************************************************************************/
 
-#ifndef ICM20648_H
-#define ICM20648_H
+#ifndef ICM20948_H
+#define ICM20948_H
 
-#include "mbed.h"
+//#include "mbed.h"
 
-/** ICM20648 class.
+/** ICM20948 class.
  *  Used for taking accelerometer and gyroscope measurements.
  *
  * Example:
  * @code
- * #include "mbed.h"
- * #include "ICM20648.h"
+ * //#include "mbed.h"
+ * #include "ICM20948.h"
  *
- * //Create an ICM20648 object
- * ICM20648 sensor(PC4, PC5);
+ * //Create an ICM20948 object
+ * ICM20948 sensor(PC4, PC5);
  *
  * int main()
  * {
- *     //Try to open the ICM20648
+ *     //Try to open the ICM20948
  *     if (sensor.open()) {
  *         printf("Device detected!\n");
  *
@@ -66,26 +66,26 @@
  * }
  * @endcode
  */
-class ICM20648
+class ICM20948
 {
 public:
 
-    /** Create an ICM20648 object connected to the specified SPI pins
+    /** Create an ICM20948 object connected to the specified SPI pins
      *
      * @param mosi The SPI MOSI pin.
      * @param miso The SPI MISO pin.
      * @param sclk The SPI clock pin.
      * @param cs The SPI Chip Select pin.
-     * @param irq The ICM20648 irq pin.
+     * @param irq The ICM20948 irq pin.
      */
-    ICM20648(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName irq = NC);
+    ICM20948(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName irq = NC);
 
     /**
-    * ICM20648 destructor
+    * ICM20948 destructor
     */
-    ~ICM20648(void);
+    ~ICM20948(void);
 
-    /** Probe for the ICM20648 and try to initialize the sensor
+    /** Probe for the ICM20948 and try to initialize the sensor
      *
      * @returns
      *   'true' if the device exists on the bus,
