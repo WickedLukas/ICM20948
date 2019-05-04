@@ -269,7 +269,6 @@
 /* Register common for all banks */
 #define ICM20948_REG_BANK_SEL            0x7F                        /**< Bank Select register                                */
 
-#define ICM20948_DEVICE_ID               0xE0                        /**< ICM20948 Device ID value                            */
 #define ICM20948_DEVICE_ID               0xEA                        /**< ICM20948 Device ID value                            */
 
 /*****************************/
@@ -329,7 +328,7 @@ bool ICM20948::open()
     read_register(ICM20948_REG_WHO_AM_I, 1, &data);
 
     /* If not - return */
-    if ( (data != ICM20948_DEVICE_ID) && (data != ICM20948_DEVICE_ID) ) {
+    if (data != ICM20948_DEVICE_ID) {
         return false;
     }
 
