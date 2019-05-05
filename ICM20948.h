@@ -24,8 +24,6 @@
 #ifndef ICM20948_H
 #define ICM20948_H
 
-//#include "mbed.h"
-
 /** ICM20948 class.
  *  Used for taking accelerometer and gyroscope measurements.
  *
@@ -131,6 +129,8 @@ private:
     /* Private functions */
     void     read_register(uint16_t addr, int numBytes, uint8_t *data);
     void     write_register(uint16_t addr, uint8_t data);
+    void     read_mag_register(uint8_t addr, int numBytes, uint8_t *data);
+    void     write_mag_register(uint8_t addr, uint8_t data);
     void     select_bank(uint8_t bank);
     uint32_t reset(void);
     uint32_t set_sample_rate(float sampleRate);
@@ -140,6 +140,7 @@ private:
     uint32_t set_accel_bandwidth(uint8_t accelBw);
     uint32_t read_accel_data(float *accel);
     uint32_t read_gyro_data(float *gyro);
+    uint32_t read_mag_data(float *mag);
     uint32_t get_accel_resolution(float *accelRes);
     uint32_t get_gyro_resolution(float *gyroRes);
     uint32_t set_accel_fullscale(uint8_t accelFs);
