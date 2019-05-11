@@ -37,7 +37,7 @@
  *
  * int main()
  * {
- *     //Try to open the ICM20948
+ *     //Try to open ICM20948
  *     if (sensor.open()) {
  *         printf("Device detected!\n");
  *
@@ -50,9 +50,9 @@
  *             sensor.get_accelerometer(&acc_x, &acc_y, &acc_z);
  *             sensor.get_gyroscope(&gyr_x, &gyr_y, &gyr_z);
  *
- *             //Print the current accelerometer measurement
+ *             //Print current accelerometer measurement
  *             printf("acc: %.3f  %.3f  %.3f\n", acc_x, acc_y, acc_z);
- *             //Print the current gyroscope measurement
+ *             //Print current gyroscope measurement
  *             printf("gyr: %.3f  %.3f  %.3f\n", gyr_x, gyr_y, gyr_z);
  *
  *             //Sleep for 0.5 seconds
@@ -68,13 +68,13 @@ class ICM20948
 {
 public:
 
-    /** Create an ICM20948 object connected to the specified SPI pins
+    /** Create an ICM20948 object connected to specified SPI pins
      *
-     * @param mosi The SPI MOSI pin.
-     * @param miso The SPI MISO pin.
-     * @param sclk The SPI clock pin.
-     * @param cs The SPI Chip Select pin.
-     * @param irq The ICM20948 irq pin.
+     * @param[in] mosi  SPI MOSI pin.
+     * @param[in] miso  SPI MISO pin.
+     * @param[in] sclk  SPI clock pin.
+     * @param[in] cs    SPI Chip Select pin.
+     * @param[in] irq   ICM20948 irq pin.
      */
     ICM20948(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName irq = NC);
 
@@ -83,11 +83,11 @@ public:
     */
     ~ICM20948(void);
 
-    /** Probe for the ICM20948 and try to initialize the sensor
+    /** Probe for ICM20948 and try to initialize sensor
      *
      * @returns
-     *   'true' if the device exists on the bus,
-     *   'false' if the device doesn't exist on the bus.
+     *   'true' if device exists on bus,
+     *   'false' if device doesn't exist on bus.
      */
     bool open();
 
@@ -97,29 +97,29 @@ public:
      */
     bool measure();
 
-    /** Do a measurement on the gyroscope
-     *
-     * @param[out] gyr_x Gyroscope measurement on X axis
-     * @param[out] gyr_y Gyroscope measurement on Y axis
-     * @param[out] gyr_z Gyroscope measurement on Z axis
-     *
-     * @returns true if measurement was successful
-     */
+    /** Gets gyroscope measurement
+    *
+    * @param[out] gyr_x Gyroscope measurement on X axis
+    * @param[out] gyr_y Gyroscope measurement on Y axis
+    * @param[out] gyr_z Gyroscope measurement on Z axis
+    *
+    * @returns true if measurement was successful
+    */
     bool get_gyroscope(float *gyr_x, float *gyr_y, float *gyr_z);
 
-    /** Do a measurement on the accelerometer
-     *
-     * @param[out] acc_x Accelerometer measurement on X axis
-     * @param[out] acc_y Accelerometer measurement on Y axis
-     * @param[out] acc_z Accelerometer measurement on Z axis
-     *
-     * @returns true if measurement was successful
-     */
+    /** Gets accelerometer measurement
+    *
+    * @param[out] acc_x Accelerometer measurement on X axis
+    * @param[out] acc_y Accelerometer measurement on Y axis
+    * @param[out] acc_z Accelerometer measurement on Z axis
+    *
+    * @returns true if measurement was successful
+    */
     bool get_accelerometer(float *acc_x, float *acc_y, float *acc_z);
 
-    /** Do a measurement of the temperature sensor
+    /** Gets temperature measurement
      *
-     * @param[out] temperature Measured temperature
+     * @param [out] measured temperature
      *
      * @returns true if measurement was successful
      */
@@ -127,36 +127,37 @@ public:
 
 private:
     /* Private functions */
-    void     read_register(uint16_t addr, int numBytes, uint8_t *data);
-    void     write_register(uint16_t addr, uint8_t data);
-    void     read_mag_register(uint8_t addr, int numBytes, uint8_t *data);
-    void     write_mag_register(uint8_t addr, uint8_t data);
-    void     select_bank(uint8_t bank);
-    uint32_t reset(void);
-    uint32_t set_sample_rate(float sampleRate);
-    float    set_gyro_sample_rate(float sampleRate);
-    float    set_accel_sample_rate(float sampleRate);
-    uint32_t set_gyro_bandwidth(uint8_t gyroBw);
-    uint32_t set_accel_bandwidth(uint8_t accelBw);
-    uint32_t read_accel_data(float *accel);
-    uint32_t read_gyro_data(float *gyro);
-    uint32_t read_mag_data(float *mag);
-    uint32_t get_accel_resolution(float *accelRes);
-    uint32_t get_gyro_resolution(float *gyroRes);
-    uint32_t set_accel_fullscale(uint8_t accelFs);
-    uint32_t set_gyro_fullscale(uint8_t gyroFs);
-    uint32_t enable_sleepmode(bool enable);
-    uint32_t enable_cyclemode(bool enable);
-    uint32_t enable_sensor(bool accel, bool gyro, bool temp);
-    uint32_t enter_lowpowermode(bool enAccel, bool enGyro, bool enTemp);
-    uint32_t enable_irq(bool dataReadyEnable, bool womEnable);
-    uint32_t read_irqstatus(uint32_t *int_status);
-    bool     is_data_ready(void);
-    uint32_t enable_wake_on_motion(bool enable, uint8_t womThreshold, float sampleRate);
-    uint32_t calibrate(float *accelBiasScaled, float *gyroBiasScaled);
-    uint32_t calibrate_gyro(float *gyroBiasScaled);
-    uint32_t read_temperature(float *temperature);
-    uint32_t get_device_id(uint8_t *device_id);
+    void        read_register(uint16_t addr, uint8_t numBytes, uint8_t *data);
+    void        write_register(uint16_t addr, uint8_t data);
+    void        read_mag_register(uint8_t addr, uint8_t numBytes, uint8_t *data);
+    void        write_mag_register(uint8_t addr, uint8_t data);
+    void        select_bank(uint8_t bank);
+    uint32_t    reset(void);
+    uint32_t    set_sample_rate(float sampleRate);
+    float       set_gyro_sample_rate(float sampleRate);
+    float       set_accel_sample_rate(float sampleRate);
+    uint32_t    set_gyro_bandwidth(uint8_t gyroBw);
+    uint32_t    set_accel_bandwidth(uint8_t accelBw);
+    uint32_t    read_accel_data(float *accel);
+    uint32_t    read_gyro_data(float *gyro);
+    uint32_t    read_mag_data(float *mag);
+    uint32_t    get_accel_resolution(float *accelRes);
+    uint32_t    get_gyro_resolution(float *gyroRes);
+    uint32_t    set_accel_fullscale(uint8_t accelFs);
+    uint32_t    set_gyro_fullscale(uint8_t gyroFs);
+    uint32_t    enable_sleepmode(bool enable);
+    uint32_t    enable_cyclemode(bool enable);
+    uint32_t    enable_sensor(bool accel, bool gyro, bool temp);
+    uint32_t    enter_lowpowermode(bool enAccel, bool enGyro, bool enTemp);
+    uint32_t    enable_irq(bool dataReadyEnable, bool womEnable);
+    uint32_t    read_irqstatus(uint32_t *int_status);
+    bool        is_data_ready(void);
+    uint32_t    enable_wake_on_motion(bool enable, uint8_t womThreshold, float sampleRate);
+    uint32_t    calibrate(float *accelBiasScaled, float *gyroBiasScaled);
+    uint32_t    calibrate_gyro(float *gyroBiasScaled);
+    uint32_t    read_temperature(float *temperature);
+    uint32_t    get_device_id(uint8_t *device_id);
+    void        set_mag_transfer(bool read);
 
     void irq_handler(void);
 
