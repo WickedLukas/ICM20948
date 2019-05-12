@@ -86,8 +86,8 @@ public:
     /** Probe for ICM20948 and try to initialize sensor
      *
      * @returns
-     *   'true' if device exists on bus,
-     *   'false' if device doesn't exist on bus.
+     *   'true' if successful,
+     *   'false' on error.
      */
     bool open();
 

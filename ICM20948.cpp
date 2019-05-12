@@ -320,13 +320,20 @@ ICM20948::ICM20948(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName
 ICM20948::~ICM20948(void) {
 }
 
+/** Probe for ICM20948 and try to initialize sensor
+*
+* @returns
+*   'true' if successful,
+*   'false' on error.
+*/
 bool ICM20948::open() {
     uint8_t data;
 
     reset();
 
-    /* Disable I2C interface, use SPI */
-    write_register(ICM20948_REG_USER_CTRL, ICM20948_BIT_I2C_IF_DIS);
+    /* Reset I2C Slave module and use SPI */
+    /* Enable I2C Master I/F module */
+    write_register(ICM20948_REG_USER_CTRL, ICM20948_BIT_I2C_IF_DIS | ICM20948_BIT_I2C_MST_EN);
 
     /* Read Who am I register, should get 0x71 */
     read_register(ICM20948_REG_WHO_AM_I, 1, &data);
@@ -336,7 +343,7 @@ bool ICM20948::open() {
         return false;
     }
 
-    /* Auto select best available clock source  PLL if ready, else use internal oscillator */
+    /* Auto select best available clock source PLL if ready, else use internal oscillator */
     write_register(ICM20948_REG_PWR_MGMT_1, ICM20948_BIT_CLK_PLL);
 
     /* PLL startup time - maybe it is too long, but better stay on the safe side - no spec in datasheet */
