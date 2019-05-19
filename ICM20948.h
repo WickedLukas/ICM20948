@@ -24,6 +24,8 @@
 #ifndef ICM20948_H
 #define ICM20948_H
 
+#include "SPI.h"
+
 /** ICM20948 class.
  *  Used for taking accelerometer and gyroscope measurements.
  *
@@ -64,23 +66,17 @@
  * }
  * @endcode
  */
-class ICM20948
-{
-public:
+class ICM20948 {
 
-    /** Create an ICM20948 object connected to specified SPI pins
-     *
-     * @param[in] mosi  SPI MOSI pin.
-     * @param[in] miso  SPI MISO pin.
-     * @param[in] sclk  SPI clock pin.
-     * @param[in] cs    SPI Chip Select pin.
-     * @param[in] irq   ICM20948 irq pin.
+public:
+    /** 
+	 * ICM20948 constructor
      */
-    ICM20948(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName irq = NC);
+    ICM20948(void);
 
     /**
-    * ICM20948 destructor
-    */
+     * ICM20948 destructor
+     */
     ~ICM20948(void);
 
     /** Probe for ICM20948 and try to initialize sensor
@@ -97,27 +93,9 @@ public:
      */
     bool measure();
 
-    /** Gets gyroscope measurement
-    *
-    * @param[out] gyr_x Gyroscope measurement on X axis
-    * @param[out] gyr_y Gyroscope measurement on Y axis
-    * @param[out] gyr_z Gyroscope measurement on Z axis
-    *
-    * @returns true if measurement was successful
-    */
-    bool get_gyroscope(float *gyr_x, float *gyr_y, float *gyr_z);
-
-    /** Gets accelerometer measurement
-    *
-    * @param[out] acc_x Accelerometer measurement on X axis
-    * @param[out] acc_y Accelerometer measurement on Y axis
-    * @param[out] acc_z Accelerometer measurement on Z axis
-    *
-    * @returns true if measurement was successful
-    */
     bool get_accelerometer(float *acc_x, float *acc_y, float *acc_z);
 
-    /** Gets temperature measurement
+    /** Get temperature measurement
      *
      * @param [out] measured temperature
      *
@@ -133,6 +111,7 @@ private:
     void        write_mag_register(uint8_t addr, uint8_t data);
     void        select_bank(uint8_t bank);
     uint32_t    reset(void);
+    uint32_t    reset_mag(void);
     uint32_t    set_sample_rate(float sampleRate);
     float       set_gyro_sample_rate(float sampleRate);
     float       set_accel_sample_rate(float sampleRate);
@@ -158,13 +137,30 @@ private:
     uint32_t    read_temperature(float *temperature);
     uint32_t    get_device_id(uint8_t *device_id);
     void        set_mag_transfer(bool read);
+};
 
-    void irq_handler(void);
+class ICM20948_SPI : public ICM20948 {
+	
+public:
+	/** Create an ICM20948_SPI object connected to specified SPI pins
+     *
+	 * @param[in] csPin		SPI Chip Select pin.
+     * @param[in] spiPort	SPI port.
+     * 
+     */
+	ICM20948_SPI(uint8_t csPin, SPIClass &spiPort = SPI);
+	
+	/**
+     * ICM20948_SPI destructor
+     */
+	ICM20948_SPI::~ICM20948_SPI(void) {
+}
 
-    /* Member variables */
-    SPI m_SPI;
-    DigitalOut m_CS;
-    InterruptIn m_IRQ;
+private:
+	/* SPI variables */
+	uint8_t		m_CS;
+	SPIClass*	m_SPI;
+	SPISettings	m_SPISettings;
 };
 
 #endif
