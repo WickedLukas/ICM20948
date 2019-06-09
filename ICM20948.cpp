@@ -71,13 +71,13 @@ bool ICM20948::init() {
 	this->set_gyro_bandwidth(ICM20948_GYRO_BW_12100HZ);
 	this->set_gyro_fullscale(ICM20948_GYRO_FULLSCALE_1000DPS);
 	// the gyroscope sample rate is 9000 Hz for ICM20948_GYRO_BW_12100HZ
-	//this->set_gyro_sample_rate(...);
+	//this->set_gyro_sample_rate_div(...);
 		
 	// configure accelerometer
 	this->set_accel_bandwidth(ICM20948_ACCEL_BW_1210HZ);
 	this->set_accel_fullscale(ICM20948_ACCEL_FULLSCALE_8G);
 	// the accelerometer sample rate is 4500 Hz for ICM20948_ACCEL_BW_1210HZ
-	//this->set_accel_sample_rate(...);
+	//this->set_accel_sample_rate_div(...);
 
     /* Auto select best available clock source PLL if ready, else use internal oscillator */
     write_register(ICM20948_REG_PWR_MGMT_1, ICM20948_BIT_CLK_PLL);
@@ -89,7 +89,7 @@ bool ICM20948::init() {
 	// Enable Raw Data Ready interrupt
 	this->enable_irq(true, false);
 
-    return OK;
+    return true;
 }
 
 /** Perform a measurement
@@ -97,7 +97,7 @@ bool ICM20948::init() {
  * @return true if measurement was successful
  */
 bool ICM20948::measure() {
-	return OK;
+	return true;
 }
 
 /** Get gyroscope measurement
@@ -110,13 +110,14 @@ bool ICM20948::measure() {
  */
 bool ICM20948::get_gyroscope(float *gyr_x, float *gyr_y, float *gyr_z) {
     float buf[3];
-    if(read_gyro_data(buf)) {
-        return false;
-    }
+	
+    read_gyro_data(buf);
 
     *gyr_x = buf[0];
     *gyr_y = buf[1];
     *gyr_z = buf[2];
+	
+	return true;
 }
 
 /** Get accelerometer measurement
@@ -129,13 +130,14 @@ bool ICM20948::get_gyroscope(float *gyr_x, float *gyr_y, float *gyr_z) {
  */
 bool ICM20948::get_accelerometer(float *acc_x, float *acc_y, float *acc_z) {
     float buf[3];
-    if(read_accel_data(buf)) {
-        return false;
-    }
+    
+	read_accel_data(buf);
 
     *acc_x = buf[0];
     *acc_y = buf[1];
     *acc_z = buf[2];
+	
+	return true;
 }
 
 /** Get temperature measurement
@@ -167,7 +169,7 @@ bool ICM20948::get_temperature(float *temperature) {
  * @return
  *    None
  ******************************************************************************/
-void ICM20948::read_register(uint16_t addr, uint8_t numBytes, uint8_t *data) {
+void ICM20948_SPI::read_register(uint16_t addr, uint8_t numBytes, uint8_t *data) {
     uint8_t regAddr;
     uint8_t bank;
 
@@ -205,7 +207,7 @@ void ICM20948::read_register(uint16_t addr, uint8_t numBytes, uint8_t *data) {
  * @return
  *    None
  ******************************************************************************/
-void ICM20948::write_register(uint16_t addr, uint8_t data) {
+void ICM20948_SPI::write_register(uint16_t addr, uint8_t data) {
     uint8_t regAddr;
     uint8_t bank;
 
@@ -332,7 +334,7 @@ void ICM20948::write_mag_register(uint8_t addr, uint8_t data) {
  * @return
  *    None
  ******************************************************************************/
-void ICM20948::select_bank(uint8_t bank) {
+void ICM20948_SPI::select_bank(uint8_t bank) {
     static uint8_t bank_old = bank;
     
     /* Select bank if it has changed */
@@ -388,77 +390,48 @@ uint32_t ICM20948::reset_mag(void) {
 
 /***************************************************************************//**
  * @brief
- *    Set accelerometer sample rate
+ *    Set gyroscope sample rate divider
  *
- * @param[in] sampleRate
- *    Desired sample rate in Hz
+ *    gyroSampleRate = 1125Hz / (1 + gyroDiv)
+ *	  gyroSampleRate = 9000 Hz for ICM20948_GYRO_BW_12100HZ
+ *
+ * @param[in] gyroDiv
+ *    Gyroscope sample rate divider
  *
  * @return
- *    Sample rate. May be different from desired value because
- *    of the finite and discrete number of divider settings
+ *    Return zero on OK, non-zero otherwise
  ******************************************************************************/
-float ICM20948::set_gyro_sample_rate(float sampleRate) {
-    uint8_t gyroDiv;
-    float gyroSampleRate;
-
-    /* Calculate sample rate divider */
-    gyroSampleRate = (1125.0f / sampleRate) - 1.0f;
-
-    /* Check if it fits inside divider register */
-    if ( gyroSampleRate > 255.0f ) {
-        gyroSampleRate = 255.0f;
-    }
-
-    if ( gyroSampleRate < 0 ) {
-        gyroSampleRate = 0.0f;
-    }
-
+float ICM20948::set_gyro_sample_rate_div(uint8_t gyroDiv) {
     /* Write value to register */
-    gyroDiv = (uint8_t) gyroSampleRate;
     write_register(ICM20948_REG_GYRO_SMPLRT_DIV, gyroDiv);
 
-    /* Calculate sample rate from divider value */
-    gyroSampleRate = 1125.0f / (gyroDiv + 1);
-
-    return gyroSampleRate;
+    return OK;
 }
 
 /***************************************************************************//**
  * @brief
- *    Set gyroscope sample rate
+ *    Set accelerometer sample rate divider
  *
- * @param[in] sampleRate
- *    Desired sample rate in Hz
+ *	  accelSampleRate = 1125Hz / (1 + accelDiv)
+ *	  accelSampleRate = 4500 Hz for ICM20948_ACCEL_BW_1210HZ
+ *
+ * @param[in] accelDiv
+ *    Accelerometer sample rate divider
  *
  * @return
- *    Sample rate. May be different from desired value because
- *    of the finite and discrete number of divider settings
+ *    Return zero on OK, non-zero otherwise
  ******************************************************************************/
-float ICM20948::set_accel_sample_rate(float sampleRate) {
-    uint16_t accelDiv;
-    float accelSampleRate;
-
-    /* Calculate sample rate divider */
-    accelSampleRate = (1125.0f / sampleRate) - 1.0f;
-
+float ICM20948::set_accel_sample_rate_div(uint16_t accelDiv) {
     /* Check if it fits inside divider registers */
-    if ( accelSampleRate > 4095.0f ) {
-        accelSampleRate = 4095.0f;
-    }
-
-    if ( accelSampleRate < 0 ) {
-        accelSampleRate = 0.0f;
+    if ( accelDiv > 4095 ) {
+        accelDiv = 4095;
     }
 
     /* Write value to registers */
-    accelDiv = (uint16_t) accelSampleRate;
-    write_register(ICM20948_REG_ACCEL_SMPLRT_DIV_1, (uint8_t) (accelDiv >> 8) );
-    write_register(ICM20948_REG_ACCEL_SMPLRT_DIV_2, (uint8_t) (accelDiv & 0xFF) );
+    write_register(ICM20948_REG_ACCEL_SMPLRT_DIV_1, (uint8_t) (accelDiv >> 8));
+    write_register(ICM20948_REG_ACCEL_SMPLRT_DIV_2, (uint8_t) (accelDiv & 0xFF));
 
-    /* Calculate sample rate from divider value */
-    accelSampleRate = 1125.0f / (accelDiv + 1);
-
-    return accelSampleRate;
+    return OK;
 }
 
 /***************************************************************************//**
@@ -982,7 +955,7 @@ bool ICM20948::is_data_ready(void) {
  * @return
  *    Return zero on OK, non-zero otherwise
  ******************************************************************************/
-uint32_t ICM20948::enable_wake_on_motion(bool enable, uint8_t womThreshold, float sampleRate) {
+uint32_t ICM20948::enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv) {
     if ( enable ) {
         /* Make sure that chip is not in sleep */
         enable_sleepmode(false);
@@ -994,7 +967,7 @@ uint32_t ICM20948::enable_wake_on_motion(bool enable, uint8_t womThreshold, floa
         enable_sensor(true, false, false);
 
         /* Set sample rate */
-        set_sample_rate(sampleRate);
+		set_accel_sample_rate_div(accelDiv);
 
         /* Set bandwidth to 1210Hz */
         set_accel_bandwidth(ICM20948_ACCEL_BW_1210HZ);
@@ -1058,8 +1031,9 @@ uint32_t ICM20948::calibrate(float *accelBiasScaled, float *gyroBiasScaled) {
     /* Enable accelerometer and gyro */
     enable_sensor(true, true, false);
 
-    /* Set 1kHz sample rate */
-    set_sample_rate(1100.0f);
+    /* Set sample rates */
+	set_accel_sample_rate_div(0);
+    set_gyro_sample_rate_div(0);
 
     /* 246Hz BW for accelerometer and 200Hz for gyroscope */
     set_accel_bandwidth(ICM20948_ACCEL_BW_246HZ);
@@ -1202,8 +1176,8 @@ uint32_t ICM20948::calibrate(float *accelBiasScaled, float *gyroBiasScaled) {
 
     /* Construct total accelerometer bias, including calculated average accelerometer bias from above */
     /* Scale 2g full scale (most sensitive range) results to 16g full scale - divide by 8 */
-    /* Clear last bit (temperature compensation? - the datasheet is not clear) */
-    /* Substract from factory calibration value */
+    /* Clear last bit (temperature compensation? - the data sheet is not clear) */
+    /* Subtract from factory calibration value */
 
     accelBiasFactory[0] -= ( (accelBias[0] / 8) & ~1);
     accelBiasFactory[1] -= ( (accelBias[1] / 8) & ~1);
@@ -1263,8 +1237,8 @@ uint32_t ICM20948::calibrate_gyro(float *gyroBiasScaled) {
     /* Enable accelerometer and gyro */
     enable_sensor(true, true, false);
 
-    /* Set 1kHz sample rate */
-    set_sample_rate(1100.0f);
+    /* Set gyro sample rate */
+    set_gyro_sample_rate_div(0);
 
     /* Configure bandwidth for gyroscope to 12Hz */
     set_gyro_bandwidth(ICM20948_GYRO_BW_12HZ);
@@ -1417,7 +1391,7 @@ uint32_t ICM20948::read_temperature(float *temperature) {
  * @param[in] spiPort	SPI port.
  * 
  */
-ICM20948_SPI::ICM20948_SPI(uint8_t csPin, SPIClass &spiPort = SPI) {
+ICM20948_SPI::ICM20948_SPI(uint8_t csPin, SPIClass &spiPort) {
 }
 
 /**
