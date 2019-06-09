@@ -304,7 +304,7 @@
 #define AK09916_BIT_MODE_20HZ               0x04                        /**< Magnetometer Measurement Rate = 20HZ   */
 #define AK09916_BIT_MODE_50HZ               0x06                        /**< Magnetometer Measurement Rate = 50HZ   */
 #define AK09916_BIT_MODE_100HZ              0x08                        /**< Magnetometer Measurement Rate = 100HZ  */
-#define AK09916_BIT_MODE_ST					0x16                        /**< Self-test                              */
+#define AK09916_BIT_MODE_ST                 0x16                        /**< Self-test                              */
 
 #define AK09916_REG_CONTROL_3               0x31                        /**< Control 3 register                     */
 #define AK09916_BIT_SRST                    0x01                        /**< Soft Reset bit                         */
@@ -360,7 +360,7 @@ class ICM20948 {
 
 public:
     /** 
-	 * ICM20948 constructor
+     * ICM20948 constructor
      */
     ICM20948(void);
 
@@ -383,18 +383,18 @@ public:
      */
     bool measure();
 
-	/** Get gyroscope measurement
-	 *
-	 * @param[out] gyr_x Gyroscope measurement on X axis
-	 * @param[out] gyr_y Gyroscope measurement on Y axis
-	 * @param[out] gyr_z Gyroscope measurement on Z axis
-	 *
-	 * @return true if measurement was successful
-	 */
-	bool get_gyroscope(float *gyr_x, float *gyr_y, float *gyr_z);
-	
-	/** Get accelerometer measurement
-	 *
+    /** Get gyroscope measurement
+     *
+     * @param[out] gyr_x Gyroscope measurement on X axis
+     * @param[out] gyr_y Gyroscope measurement on Y axis
+     * @param[out] gyr_z Gyroscope measurement on Z axis
+     *
+     * @return true if measurement was successful
+     */
+    bool get_gyroscope(float *gyr_x, float *gyr_y, float *gyr_z);
+    
+    /** Get accelerometer measurement
+     *
      * @param[out] acc_x Accelerometer measurement on X axis
      * @param[out] acc_y Accelerometer measurement on Y axis
      * @param[out] acc_z Accelerometer measurement on Z axis
@@ -412,66 +412,71 @@ public:
     bool get_temperature(float *temperature);
 
 private:
+    /* Private variables */
+    float            m_accelRes;
+    float            m_gyroRes;
+    
     /* Private functions */
-	virtual void    read_register(uint16_t addr, uint8_t numBytes, uint8_t *data){};
-	virtual void    write_register(uint16_t addr, uint8_t data){};
-	virtual void    select_bank(uint8_t bank){};
-	
-    void			read_mag_register(uint8_t addr, uint8_t numBytes, uint8_t *data);
-    void			write_mag_register(uint8_t addr, uint8_t data);
-	void			set_mag_transfer(bool read);
-    uint32_t		reset(void);
-    uint32_t		reset_mag(void);
-    float			set_gyro_sample_rate_div(uint8_t gyroDiv);
-    float			set_accel_sample_rate_div(uint16_t accelDiv);
-    uint32_t		set_gyro_bandwidth(uint8_t gyroBw);
-    uint32_t		set_accel_bandwidth(uint8_t accelBw);
-    uint32_t		read_accel_data(float *accel);
-    uint32_t		read_gyro_data(float *gyro);
-    uint32_t		read_mag_data(float *mag);
-    uint32_t		get_accel_resolution(float *accelRes);
-    uint32_t		get_gyro_resolution(float *gyroRes);
-    uint32_t		set_accel_fullscale(uint8_t accelFs);
-    uint32_t		set_gyro_fullscale(uint8_t gyroFs);
-    uint32_t		enable_sleepmode(bool enable);
-    uint32_t		enable_cyclemode(bool enable);
-    uint32_t		enable_sensor(bool accel, bool gyro, bool temp);
-    uint32_t		enter_lowpowermode(bool enAccel, bool enGyro, bool enTemp);
-    uint32_t		enable_irq(bool dataReadyEnable, bool womEnable);
-    uint32_t		read_irqstatus(uint32_t *int_status);
-    bool			is_data_ready(void);
-    uint32_t		enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv);
-    uint32_t		calibrate(float *accelBiasScaled, float *gyroBiasScaled);
-    uint32_t		calibrate_gyro(float *gyroBiasScaled);
-    uint32_t		read_temperature(float *temperature);
+    virtual void    read_register(uint16_t addr, uint8_t numBytes, uint8_t *data){};
+    virtual void    write_register(uint16_t addr, uint8_t data){};
+    virtual void    select_bank(uint8_t bank){};
+    
+    void            read_mag_register(uint8_t addr, uint8_t numBytes, uint8_t *data);
+    void            write_mag_register(uint8_t addr, uint8_t data);
+    void            set_mag_transfer(bool read);
+    
+    uint32_t        reset(void);
+    uint32_t        reset_mag(void);
+    uint32_t        set_gyro_sample_rate_div(uint8_t gyroDiv);
+    uint32_t        set_accel_sample_rate_div(uint16_t accelDiv);
+    uint32_t        set_gyro_bandwidth(uint8_t gyroBw);
+    uint32_t        set_accel_bandwidth(uint8_t accelBw);
+    uint32_t        read_gyro_data(float *gyro);
+    uint32_t        read_accel_data(float *accel);
+    uint32_t        read_mag_data(float *mag);
+    uint32_t        get_gyro_resolution(float *gyroRes);
+    uint32_t        get_accel_resolution(float *accelRes);
+    uint32_t        set_gyro_fullscale(uint8_t gyroFs);
+    uint32_t        set_accel_fullscale(uint8_t accelFs);
+    uint32_t        enable_sleepmode(bool enable);
+    uint32_t        enable_cyclemode(bool enable);
+    uint32_t        enable_sensor(bool accel, bool gyro, bool temp);
+    uint32_t        enter_lowpowermode(bool enAccel, bool enGyro, bool enTemp);
+    uint32_t        enable_irq(bool dataReadyEnable, bool womEnable);
+    uint32_t        read_irqstatus(uint32_t *int_status);
+    bool            is_data_ready(void);
+    uint32_t        enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv);
+    uint32_t        calibrate(float *accelBiasScaled, float *gyroBiasScaled);
+    uint32_t        calibrate_gyro(float *gyroBiasScaled);
+    uint32_t        read_temperature(float *temperature);
 };
 
 class ICM20948_SPI : public ICM20948 {
-	
+    
 public:
-	/** Create an ICM20948_SPI object connected to specified SPI pins
+    /** Create an ICM20948_SPI object connected to specified SPI pins
      *
-	 * @param[in] csPin		SPI Chip Select pin.
-     * @param[in] spiPort	SPI port.
+     * @param[in] csPin        SPI Chip Select pin.
+     * @param[in] spiPort    SPI port.
      * 
      */
-	ICM20948_SPI(uint8_t csPin, SPIClass &spiPort = SPI);
-	
-	/**
+    ICM20948_SPI(uint8_t csPin, SPIClass &spiPort = SPI);
+    
+    /**
      * ICM20948_SPI destructor
      */
-	~ICM20948_SPI(void);
+    ~ICM20948_SPI(void);
 
 private:
-	/* SPI variables */
-	uint8_t		m_CS;
-	SPIClass*	m_SPI;
-	SPISettings	m_SPISettings;
-	
-	/* Private functions */
-	void        read_register(uint16_t addr, uint8_t numBytes, uint8_t *data);
-	void        write_register(uint16_t addr, uint8_t data);
-	void        select_bank(uint8_t bank);
+    /* SPI variables */
+    uint8_t         m_CS;
+    SPIClass*       m_SPI;
+    SPISettings     m_SPISettings;
+    
+    /* Private functions */
+    void            read_register(uint16_t addr, uint8_t numBytes, uint8_t *data);
+    void            write_register(uint16_t addr, uint8_t data);
+    void            select_bank(uint8_t bank);
 };
 
 #endif
