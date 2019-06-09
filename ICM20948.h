@@ -161,18 +161,18 @@
 /***********************/
 /* Bank 2 register map */
 /***********************/
-#define ICM20948_REG_GYRO_SMPLRT_DIV        (ICM20948_BANK_2 | 0x00)    /**< Gyroscope Sample Rate Divider regiser      */
+#define ICM20948_REG_GYRO_SMPLRT_DIV        (ICM20948_BANK_2 | 0x00)    /**< Gyroscope Sample Rate Divider register     */
 
 #define ICM20948_REG_GYRO_CONFIG_1          (ICM20948_BANK_2 | 0x01)    /**< Gyroscope Configuration 1 register         */
 #define ICM20948_BIT_GYRO_FCHOICE           0x01                        /**< Gyro Digital Low-Pass Filter enable bit    */
 #define ICM20948_SHIFT_GYRO_FS_SEL          0x01                        /**< Gyro Full Scale Select bit shift           */
 #define ICM20948_SHIFT_GYRO_DLPCFG          0x03                        /**< Gyro DLPF Config bit shift                 */
-#define ICM20948_MASK_GYRO_FULLSCALE        0x06                        /**< Gyro Full Scale Select bitmask             */
-#define ICM20948_MASK_GYRO_BW               0x39                        /**< Gyro Bandwidth Select bitmask              */
-#define ICM20948_GYRO_FULLSCALE_250DPS      (0x00 << ICM20948_SHIFT_GYRO_FS_SEL)    /**< Gyro Full Scale = 250 deg/sec  */
-#define ICM20948_GYRO_FULLSCALE_500DPS      (0x01 << ICM20948_SHIFT_GYRO_FS_SEL)    /**< Gyro Full Scale = 500 deg/sec  */
-#define ICM20948_GYRO_FULLSCALE_1000DPS     (0x02 << ICM20948_SHIFT_GYRO_FS_SEL)    /**< Gyro Full Scale = 1000 deg/sec */
-#define ICM20948_GYRO_FULLSCALE_2000DPS     (0x03 << ICM20948_SHIFT_GYRO_FS_SEL)    /**< Gyro Full Scale = 2000 deg/sec */
+#define ICM20948_MASK_GYRO_FULLSCALE        0x06                        /**< Gyro Full Scale Select bit mask            */
+#define ICM20948_MASK_GYRO_BW               0x39                        /**< Gyro Bandwidth Select bit mask             */
+#define ICM20948_GYRO_FULLSCALE_250DPS      (0x00 << ICM20948_SHIFT_GYRO_FS_SEL)    /**< Gyro Full Scale = 250 deg/s  */
+#define ICM20948_GYRO_FULLSCALE_500DPS      (0x01 << ICM20948_SHIFT_GYRO_FS_SEL)    /**< Gyro Full Scale = 500 deg/s  */
+#define ICM20948_GYRO_FULLSCALE_1000DPS     (0x02 << ICM20948_SHIFT_GYRO_FS_SEL)    /**< Gyro Full Scale = 1000 deg/s */
+#define ICM20948_GYRO_FULLSCALE_2000DPS     (0x03 << ICM20948_SHIFT_GYRO_FS_SEL)    /**< Gyro Full Scale = 2000 deg/s */
 #define ICM20948_GYRO_BW_12100HZ            (0x00 << ICM20948_SHIFT_GYRO_DLPCFG)                                    /**< Gyro Bandwidth = 12100 Hz */
 #define ICM20948_GYRO_BW_360HZ              ( (0x07 << ICM20948_SHIFT_GYRO_DLPCFG) | ICM20948_BIT_GYRO_FCHOICE)     /**< Gyro Bandwidth = 360 Hz   */
 #define ICM20948_GYRO_BW_200HZ              ( (0x00 << ICM20948_SHIFT_GYRO_DLPCFG) | ICM20948_BIT_GYRO_FCHOICE)     /**< Gyro Bandwidth = 200 Hz   */
@@ -208,8 +208,8 @@
 #define ICM20948_BIT_ACCEL_FCHOICE          0x01                        /**< Accel Digital Low-Pass Filter enable bit               */
 #define ICM20948_SHIFT_ACCEL_FS             0x01                        /**< Accel Full Scale Select bit shift                      */
 #define ICM20948_SHIFT_ACCEL_DLPCFG         0x03                        /**< Accel DLPF Config bit shift                            */
-#define ICM20948_MASK_ACCEL_FULLSCALE       0x06                        /**< Accel Full Scale Select bitmask                        */
-#define ICM20948_MASK_ACCEL_BW              0x39                        /**< Accel Bandwidth Select bitmask                         */
+#define ICM20948_MASK_ACCEL_FULLSCALE       0x06                        /**< Accel Full Scale Select bit mask                       */
+#define ICM20948_MASK_ACCEL_BW              0x39                        /**< Accel Bandwidth Select bit mask                        */
 #define ICM20948_ACCEL_FULLSCALE_2G         (0x00 << ICM20948_SHIFT_ACCEL_FS)   /**< Accel Full Scale = 2 g     */
 #define ICM20948_ACCEL_FULLSCALE_4G         (0x01 << ICM20948_SHIFT_ACCEL_FS)   /**< Accel Full Scale = 4 g     */
 #define ICM20948_ACCEL_FULLSCALE_8G         (0x02 << ICM20948_SHIFT_ACCEL_FS)   /**< Accel Full Scale = 8 g     */
@@ -377,44 +377,89 @@ public:
      */
     bool init();
 
-    /** Perform a measurement
+    /** Read sensors
      *
      * @returns true if measurement was successful
      */
-    bool measure();
+    bool read();
 
-    /** Get gyroscope measurement
+    /** Read gyroscope raw data
      *
-     * @param[out] gyr_x Gyroscope measurement on X axis
-     * @param[out] gyr_y Gyroscope measurement on Y axis
-     * @param[out] gyr_z Gyroscope measurement on Z axis
+     * @param[out] gyro_x Gyroscope raw measurement on X axis
+     * @param[out] gyro_y Gyroscope raw measurement on Y axis
+     * @param[out] gyro_z Gyroscope raw measurement on Z axis
+     *
+     * @return
+     *    Return zero on OK, non-zero otherwise
+     */
+    bool read_gyro(int16_t &gyro_x, int16_t &gyro_y, int16_t &gyro_z);
+
+    /** Read accelerometer raw data
+     *
+     * @param[out] accel_x Accelerometer raw measurement on X axis
+     * @param[out] accel_y Accelerometer raw measurement on Y axis
+     * @param[out] accel_z Accelerometer raw measurement on Z axis
+     *
+     * @return
+     *    Return zero on OK, non-zero otherwise
+     */
+    bool read_accel(int16_t &accel_x, int16_t &accel_y, int16_t &accel_z);
+
+    /** Read magnetometer raw data
+     *
+     * @param[out] mag_x Magnetometer raw measurement on X axis
+     * @param[out] mag_y Magnetometer raw measurement on Y axis
+     * @param[out] mag_z Magnetometer raw measurement on Z axis
+     *
+     * @return
+     *    Return zero on OK, non-zero otherwise
+     */
+    bool read_mag(int16_t &mag_x, int16_t &mag_y, int16_t &mag_z);
+
+    /** Read temperature raw data
+     *
+     * @param[out]
+     *    Temperature raw measurement
+     *
+     * @return
+     *    Return zero on OK, non-zero otherwise
+     */
+    bool read_temperature(int16_t &temperature);
+
+    /** read gyroscope in deg/s
+     *
+     * @param[out] gyr_x Gyroscope measurement on X axis in deg/s
+     * @param[out] gyr_y Gyroscope measurement on Y axis in deg/s
+     * @param[out] gyr_z Gyroscope measurement on Z axis in deg/s
      *
      * @return true if measurement was successful
      */
-    bool get_gyroscope(float *gyr_x, float *gyr_y, float *gyr_z);
+    bool read_gyro_dps(float &gyro_x_dps, float &gyro_y_dps, float &gyro_z_dps);
     
-    /** Get accelerometer measurement
+    /** Read accelerometer in g
      *
-     * @param[out] acc_x Accelerometer measurement on X axis
-     * @param[out] acc_y Accelerometer measurement on Y axis
-     * @param[out] acc_z Accelerometer measurement on Z axis
+     * @param[out] accel_x Accelerometer measurement on X axis in g
+     * @param[out] accel_y Accelerometer measurement on Y axis in g
+     * @param[out] accel_z Accelerometer measurement on Z axis in g
      *
      * @return true if measurement was successful
      */
-    bool get_accelerometer(float *acc_x, float *acc_y, float *acc_z);
+     bool read_accel_g(float &accel_x_g, float &accel_y_g, float &accel_z_g);
 
-    /** Get temperature measurement
+    /** Read temperature in Celsius
      *
-     * @param [out] measured temperature
+     * @param [out] temperature_c
+     *    Temperature measurement in Celsius
      *
-     * @returns true if measurement was successful
+     * @return true if measurement was successful
      */
-    bool get_temperature(float *temperature);
+    bool read_temperature_c(float &temperature_c);
 
 private:
     /* Private variables */
-    float            m_accelRes;
-    float            m_gyroRes;
+    float           m_gyroRes;
+    float           m_accelRes;
+    const float     m_magRes = 4912.0f / 32752.0f;    /**    Measurement range of each axis +-4912 uT is saved in 16 bit output +-32752    */
     
     /* Private functions */
     virtual void    read_register(uint16_t addr, uint8_t numBytes, uint8_t *data){};
@@ -431,13 +476,10 @@ private:
     uint32_t        set_accel_sample_rate_div(uint16_t accelDiv);
     uint32_t        set_gyro_bandwidth(uint8_t gyroBw);
     uint32_t        set_accel_bandwidth(uint8_t accelBw);
-    uint32_t        read_gyro_data(float *gyro);
-    uint32_t        read_accel_data(float *accel);
-    uint32_t        read_mag_data(float *mag);
-    uint32_t        get_gyro_resolution(float *gyroRes);
-    uint32_t        get_accel_resolution(float *accelRes);
     uint32_t        set_gyro_fullscale(uint8_t gyroFs);
     uint32_t        set_accel_fullscale(uint8_t accelFs);
+    uint32_t        get_gyro_resolution(float *gyroRes);
+    uint32_t        get_accel_resolution(float *accelRes);
     uint32_t        enable_sleepmode(bool enable);
     uint32_t        enable_cyclemode(bool enable);
     uint32_t        enable_sensor(bool accel, bool gyro, bool temp);
@@ -448,7 +490,6 @@ private:
     uint32_t        enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv);
     uint32_t        calibrate(float *accelBiasScaled, float *gyroBiasScaled);
     uint32_t        calibrate_gyro(float *gyroBiasScaled);
-    uint32_t        read_temperature(float *temperature);
 };
 
 class ICM20948_SPI : public ICM20948 {
@@ -456,8 +497,8 @@ class ICM20948_SPI : public ICM20948 {
 public:
     /** Create an ICM20948_SPI object connected to specified SPI pins
      *
-     * @param[in] csPin        SPI Chip Select pin.
-     * @param[in] spiPort    SPI port.
+     * @param[in] csPin     SPI Chip Select pin.
+     * @param[in] spiPort   SPI port.
      * 
      */
     ICM20948_SPI(uint8_t csPin, SPIClass &spiPort = SPI);

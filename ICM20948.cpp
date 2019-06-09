@@ -65,27 +65,27 @@ bool ICM20948::init() {
     if (data != AK09916_DEVICE_ID) {
         return ERROR;
     }
-	
-	// TODO: odr_align_en to sync sample rates seems not to be necessary
-	// configure gyroscope
-	this->set_gyro_bandwidth(ICM20948_GYRO_BW_12100HZ);
-	this->set_gyro_fullscale(ICM20948_GYRO_FULLSCALE_1000DPS);
-	//this->set_gyro_sample_rate_div(...);	// the gyroscope sample rate is 9000 Hz for ICM20948_GYRO_BW_12100HZ
-		
-	// configure accelerometer
-	this->set_accel_bandwidth(ICM20948_ACCEL_BW_1210HZ);
-	this->set_accel_fullscale(ICM20948_ACCEL_FULLSCALE_8G);
-	//this->set_accel_sample_rate_div(...);	// the accelerometer sample rate is 4500 Hz for ICM20948_ACCEL_BW_1210HZ
+    
+    // TODO: odr_align_en to sync sample rates seems not to be necessary
+    // configure gyroscope
+    this->set_gyro_bandwidth(ICM20948_GYRO_BW_12100HZ);
+    this->set_gyro_fullscale(ICM20948_GYRO_FULLSCALE_1000DPS);
+    //this->set_gyro_sample_rate_div(...);    // the gyroscope sample rate is 9000 Hz for ICM20948_GYRO_BW_12100HZ
+        
+    // configure accelerometer
+    this->set_accel_bandwidth(ICM20948_ACCEL_BW_1210HZ);
+    this->set_accel_fullscale(ICM20948_ACCEL_FULLSCALE_8G);
+    //this->set_accel_sample_rate_div(...);    // the accelerometer sample rate is 4500 Hz for ICM20948_ACCEL_BW_1210HZ
 
     /* Auto select best available clock source PLL if ready, else use internal oscillator */
     write_register(ICM20948_REG_PWR_MGMT_1, ICM20948_BIT_CLK_PLL);
 
     /* PLL startup time - maybe it is too long, but better stay on the safe side - no spec in data sheet */
     delay(30);
-	
-	// TODO: make it configurable
-	// Enable Raw Data Ready interrupt
-	this->enable_irq(true, false);
+    
+    // TODO: make it configurable
+    // Enable Raw Data Ready interrupt
+    this->enable_irq(true, false);
 
     return true;
 }
@@ -94,58 +94,156 @@ bool ICM20948::init() {
  *
  * @return true if measurement was successful
  */
-bool ICM20948::measure() {
-	return true;
+bool ICM20948::read() {
+    return true;
 }
 
-/** Get gyroscope measurement
+/** Read gyroscope raw data
  *
- * @param[out] gyr_x Gyroscope measurement on X axis
- * @param[out] gyr_y Gyroscope measurement on Y axis
- * @param[out] gyr_z Gyroscope measurement on Z axis
+ * @param[out] gyro_x Gyroscope raw measurement on X axis
+ * @param[out] gyro_y Gyroscope raw measurement on Y axis
+ * @param[out] gyro_z Gyroscope raw measurement on Z axis
  *
- * @return true if measurement was successful
+ * @return
+ *    Return zero on OK, non-zero otherwise
  */
-bool ICM20948::get_gyroscope(float *gyr_x, float *gyr_y, float *gyr_z) {
-    float buf[3];
-	
-    read_gyro_data(buf);
+bool ICM20948::read_gyro(int16_t &gyro_x, int16_t &gyro_y, int16_t &gyro_z) {
+    static uint8_t data[6];
 
-    *gyr_x = buf[0];
-    *gyr_y = buf[1];
-    *gyr_z = buf[2];
-	
-	return true;
+    /* Read six raw data registers into a data array */
+    read_register(ICM20948_REG_GYRO_XOUT_H_SH, 6, &data[0]);
+
+    /* Convert the MSB and LSB into a signed 16-bit value */
+    gyro_x = ( ((int16_t) data[0] << 8) | data[1] );
+    gyro_y = ( ((int16_t) data[2] << 8) | data[3] );
+    gyro_z = ( ((int16_t) data[4] << 8) | data[5] );
+
+    return true;
 }
 
-/** Get accelerometer measurement
+/** Read accelerometer raw data
  *
- * @param[out] acc_x Accelerometer measurement on X axis
- * @param[out] acc_y Accelerometer measurement on Y axis
- * @param[out] acc_z Accelerometer measurement on Z axis
+ * @param[out] accel_x Accelerometer raw measurement on X axis
+ * @param[out] accel_y Accelerometer raw measurement on Y axis
+ * @param[out] accel_z Accelerometer raw measurement on Z axis
  *
- * @return true if measurement was successful
+ * @return
+ *    Return zero on OK, non-zero otherwise
  */
-bool ICM20948::get_accelerometer(float *acc_x, float *acc_y, float *acc_z) {
-    float buf[3];
+bool ICM20948::read_accel(int16_t &accel_x, int16_t &accel_y, int16_t &accel_z) {
+    static uint8_t data[6];
+
+    /* Read six raw data registers into a data array */
+    read_register(ICM20948_REG_ACCEL_XOUT_H_SH, 6, &data[0]);
     
-	read_accel_data(buf);
+    /* Convert the MSB and LSB into a signed 16-bit value */
+    accel_x = ( ((int16_t) data[0] << 8) | data[1] );
+    accel_y = ( ((int16_t) data[2] << 8) | data[3] );
+    accel_z = ( ((int16_t) data[4] << 8) | data[5] );
 
-    *acc_x = buf[0];
-    *acc_y = buf[1];
-    *acc_z = buf[2];
-	
-	return true;
+    return true;
 }
 
-/** Get temperature measurement
+/** Read magnetometer raw data
  *
- * @param [out] measured temperature
+ * @param[out] mag_x Magnetometer raw measurement on X axis
+ * @param[out] mag_y Magnetometer raw measurement on Y axis
+ * @param[out] mag_z Magnetometer raw measurement on Z axis
+ *
+ * @return
+ *    Return zero on OK, non-zero otherwise
+ */
+bool ICM20948::read_mag(int16_t &mag_x, int16_t &mag_y, int16_t &mag_z) {
+    static uint8_t data[6];
+
+    /* Read six raw data registers into a data array */
+    read_register(ICM20948_REG_EXT_SLV_SENS_DATA_00, 6, &data[0]);
+
+    /* Convert the MSB and LSB into a signed 16-bit value */
+    mag_x = ( ((int16_t) data[0] << 8) | data[1] );
+    mag_y = ( ((int16_t) data[2] << 8) | data[3] );
+    mag_z = ( ((int16_t) data[4] << 8) | data[5] );
+
+    return true;
+}
+
+/** Read temperature raw data
+ *
+ * @param[out]
+ *    Temperature raw measurement
+ *
+ * @return
+ *    Return zero on OK, non-zero otherwise
+ */
+bool ICM20948::read_temperature(int16_t &temperature) {
+    static uint8_t data[2];
+
+    /* Read two raw data registers into a data array */
+    read_register(ICM20948_REG_TEMPERATURE_H, 2, &data[0]);
+
+    /* Convert the MSB and LSB into a signed 16-bit value */
+    temperature = (int16_t) ( (data[0] << 8) + data[1]);
+
+    return true;
+}
+
+/** Read gyroscope in deg/s
+ *
+ * @param[out] gyr_x Gyroscope measurement on X axis in deg/s
+ * @param[out] gyr_y Gyroscope measurement on Y axis in deg/s
+ * @param[out] gyr_z Gyroscope measurement on Z axis in deg/s
  *
  * @return true if measurement was successful
  */
-bool ICM20948::get_temperature(float *temperature) {
+bool ICM20948::read_gyro_dps(float &gyro_x_dps, float &gyro_y_dps, float &gyro_z_dps) {
+    static int16_t gyro_x, gyro_y, gyro_z;
+    
+    read_gyro(gyro_x, gyro_y, gyro_z);
+
+    /* Multiply the raw measurements with the resolution to transform them into dps */
+    gyro_x_dps = gyro_x * m_gyroRes;
+    gyro_y_dps = gyro_y * m_gyroRes;
+    gyro_z_dps = gyro_z * m_gyroRes;
+    
+    return true;
+}
+
+/** Read accelerometer in g
+ *
+ * @param[out] accel_x Accelerometer measurement on X axis in g
+ * @param[out] accel_y Accelerometer measurement on Y axis in g
+ * @param[out] accel_z Accelerometer measurement on Z axis in g
+ *
+ * @return true if measurement was successful
+ */
+bool ICM20948::read_accel_g(float &accel_x_g, float &accel_y_g, float &accel_z_g) {
+    static int16_t accel_x, accel_y, accel_z;
+    
+    read_accel(accel_x, accel_y, accel_z);
+    
+    /* Multiply the raw measurements with the resolution to transform them into g */
+    accel_x_g = accel_x * m_accelRes;
+    accel_y_g = accel_y * m_accelRes;
+    accel_z_g = accel_z * m_accelRes;
+    
+    return true;
+}
+
+/** Read temperature in Celsius
+ *
+ * @param [out] temperature_c
+ *      Temperature measurement in Celsius
+ *
+ * @return true if measurement was successful
+ */
+bool ICM20948::read_temperature_c(float &temperature_c) {
+    static int16_t temperature;
+
     read_temperature(temperature);
+    
+    /* Transform the raw measurement into Celsius */
+    temperature_c = ( (float) temperature / 333.87f) + 21.0f;
+
     return true;
 }
 
@@ -308,7 +406,7 @@ void ICM20948::read_mag_register(uint8_t addr, uint8_t numBytes, uint8_t *data) 
     set_mag_transfer(true);
     
     /* Set SLV0_REG to magnetometer register address */
-	write_register(ICM20948_REG_I2C_SLV0_REG, addr);
+    write_register(ICM20948_REG_I2C_SLV0_REG, addr);
     
     /* Request bytes */
     write_register(ICM20948_REG_I2C_SLV0_CTRL, ICM20948_BIT_I2C_SLV_EN | numBytes);
@@ -341,10 +439,10 @@ void ICM20948::write_mag_register(uint8_t addr, uint8_t data) {
     set_mag_transfer(false);
     
     /* Set SLV0_REG to magnetometer register address */
-	write_register(ICM20948_REG_I2C_SLV0_REG, addr);
+    write_register(ICM20948_REG_I2C_SLV0_REG, addr);
     
     /* Store data to write inside SLV0_DO */
-	write_register(ICM20948_REG_I2C_SLV0_DO, data);
+    write_register(ICM20948_REG_I2C_SLV0_DO, data);
     
     /* Send one byte */
     write_register(ICM20948_REG_I2C_SLV0_CTRL, ICM20948_BIT_I2C_SLV_EN | 0x01);
@@ -391,7 +489,7 @@ uint32_t ICM20948::reset_mag(void) {
  *    Set gyroscope sample rate divider
  *
  *    gyroSampleRate = 1125Hz / (1 + gyroDiv)
- *	  gyroSampleRate = 9000 Hz for ICM20948_GYRO_BW_12100HZ
+ *    gyroSampleRate = 9000 Hz for ICM20948_GYRO_BW_12100HZ
  *
  * @param[in] gyroDiv
  *    Gyroscope sample rate divider
@@ -410,8 +508,8 @@ uint32_t ICM20948::set_gyro_sample_rate_div(uint8_t gyroDiv) {
  * @brief
  *    Set accelerometer sample rate divider
  *
- *	  accelSampleRate = 1125Hz / (1 + accelDiv)
- *	  accelSampleRate = 4500 Hz for ICM20948_ACCEL_BW_1210HZ
+ *    accelSampleRate = 1125Hz / (1 + accelDiv)
+ *    accelSampleRate = 4500 Hz for ICM20948_ACCEL_BW_1210HZ
  *
  * @param[in] accelDiv
  *    Accelerometer sample rate divider
@@ -482,92 +580,80 @@ uint32_t ICM20948::set_accel_bandwidth(uint8_t accelBw) {
 
 /***************************************************************************//**
  * @brief
- *    Read raw gyroscope values and convert them to deg/sec
+ *    Set gyroscope full scale
  *
- * @param[out] gyro
- *    A 3-element array of float numbers containing gyroscope values
- *    for x, y and z axes in deg/sec units.
+ * @param[in] gyroFs
+ *    Desired full scale value. Use ICM20948_GYRO_FULLSCALE macros.
  *
  * @return
  *    Return zero on OK, non-zero otherwise
  ******************************************************************************/
-uint32_t ICM20948::read_gyro_data(float *gyro) {
-    static uint8_t rawData[6];
-    static int16_t temp;
-
-    /* Read six raw data registers into a data array */
-    read_register(ICM20948_REG_GYRO_XOUT_H_SH, 6, &rawData[0]);
-
-    /* Convert the MSB and LSB into a signed 16-bit value and multiply it with the resolution to get the dps value */
-    temp = ( (int16_t) rawData[0] << 8) | rawData[1];
-    gyro[0] = (float) temp * m_gyroRes;
-    temp = ( (int16_t) rawData[2] << 8) | rawData[3];
-    gyro[1] = (float) temp * m_gyroRes;
-    temp = ( (int16_t) rawData[4] << 8) | rawData[5];
-    gyro[2] = (float) temp * m_gyroRes;
+uint32_t ICM20948::set_gyro_fullscale(uint8_t gyroFs) {
+    uint8_t reg;
+    
+    /* Calculate and save gyro resolution */
+    switch ( gyroFs ) {
+        case ICM20948_GYRO_FULLSCALE_250DPS:
+            m_gyroRes = 250.0f / 32768.0f;
+            break;
+        case ICM20948_GYRO_FULLSCALE_500DPS:
+            m_gyroRes = 500.0f / 32768.0f;
+            break;
+        case ICM20948_GYRO_FULLSCALE_1000DPS:
+            m_gyroRes = 1000.0f / 32768.0f;
+            break;
+        case ICM20948_GYRO_FULLSCALE_2000DPS:
+            m_gyroRes = 2000.0f / 32768.0f;
+            break;
+        default:
+            return ERROR;
+    }
+        
+    gyroFs &= ICM20948_MASK_GYRO_FULLSCALE;
+    read_register(ICM20948_REG_GYRO_CONFIG_1, 1, &reg);
+    reg &= ~(ICM20948_MASK_GYRO_FULLSCALE);
+    reg |= gyroFs;
+    write_register(ICM20948_REG_GYRO_CONFIG_1, reg);
 
     return OK;
 }
 
 /***************************************************************************//**
  * @brief
- *    Read raw acceleration values and convert them to G values
+ *    Set accelerometer full scale
  *
- * @param[out] accel
- *    A 3-element array of float numbers containing acceleration values
- *    for x, y and z axes in g units.
- *
- * @return
- *    Return zero on OK, non-zero otherwise
- ******************************************************************************/
-uint32_t ICM20948::read_accel_data(float *accel) {
-    static uint8_t rawData[6];
-    static int16_t temp;
-
-    /* Read six raw data registers into a data array */
-    read_register(ICM20948_REG_ACCEL_XOUT_H_SH, 6, &rawData[0]);
-
-    /* Convert the MSB and LSB into a signed 16-bit value and multiply it with the resolution to get the G value */
-    temp = ( (int16_t) rawData[0] << 8) | rawData[1];
-    accel[0] = (float) temp * m_accelRes;
-    temp = ( (int16_t) rawData[2] << 8) | rawData[3];
-    accel[1] = (float) temp * m_accelRes;
-    temp = ( (int16_t) rawData[4] << 8) | rawData[5];
-    accel[2] = (float) temp * m_accelRes;
-
-    return OK;
-}
-
-/***************************************************************************//**
- * @brief
- *    Read raw magnetometer values and convert them to uT
- *
- * @param[out] mag
- *    A 3-element array of float numbers containing magnetometer values
- *    for x, y and z axes in uT units.
+ * @param[in] accelFs
+ *    Desired full scale value. Use ICM20948_ACCEL_FULLSCALE macros.
  *
  * @return
  *    Return zero on OK, non-zero otherwise
  ******************************************************************************/
-uint32_t ICM20948::read_mag_data(float *mag) {
-    uint8_t rawData[6];
-    
-    /* Calculate resolution */
-    /* Measurement range of each axis +-4912 uT is saved in 16 bit output +-32752 */
-    static const float magRes = 4912.0f / 32752.0f;
-    
-    int16_t temp;
+uint32_t ICM20948::set_accel_fullscale(uint8_t accelFs) {
+    uint8_t reg;
 
-    /* Read six raw data registers into a data array */
-    read_register(ICM20948_REG_EXT_SLV_SENS_DATA_00, 6, &rawData[0]);
-
-    /* Convert the MSB and LSB into a signed 16-bit value and multiply it with the resolution to get the uT value */
-    temp = ( (int16_t) rawData[0] << 8) | rawData[1];
-    mag[0] = (float) temp * magRes;
-    temp = ( (int16_t) rawData[2] << 8) | rawData[3];
-    mag[1] = (float) temp * magRes;
-    temp = ( (int16_t) rawData[4] << 8) | rawData[5];
-    mag[2] = (float) temp * magRes;
+    /* Calculate and save accel resolution */
+    switch ( accelFs ) {
+        case ICM20948_ACCEL_FULLSCALE_2G:
+            m_accelRes = 2.0f / 32768.0f;
+            break;
+        case ICM20948_ACCEL_FULLSCALE_4G:
+            m_accelRes = 4.0f / 32768.0f;
+            break;
+        case ICM20948_ACCEL_FULLSCALE_8G:
+            m_accelRes = 8.0f / 32768.0f;
+            break;
+        case ICM20948_ACCEL_FULLSCALE_16G:
+            m_accelRes = 16.0f / 32768.0f;
+            break;
+        default:
+            return ERROR;
+    }
+        
+    accelFs &= ICM20948_MASK_ACCEL_FULLSCALE;
+    read_register(ICM20948_REG_ACCEL_CONFIG, 1, &reg);
+    reg &= ~(ICM20948_MASK_ACCEL_FULLSCALE);
+    reg |= accelFs;
+    write_register(ICM20948_REG_ACCEL_CONFIG, reg);
 
     return OK;
 }
@@ -577,7 +663,7 @@ uint32_t ICM20948::read_mag_data(float *mag) {
  *    Get gyroscope resolution
  *
  * @param[out] gyroRes
- *    Resolution in (deg/sec)/bit units
+ *    Resolution in (deg/s)/bit
  *
  * @return
  *    Return zero on OK, non-zero otherwise
@@ -616,7 +702,7 @@ uint32_t ICM20948::get_gyro_resolution(float *gyroRes) {
  *    Get accelerometer resolution
  *
  * @param[out] accelRes
- *    Resolution in g/bit units
+ *    Resolution in g/bit
  *
  * @return
  *    Return zero on OK, non-zero otherwise
@@ -646,86 +732,6 @@ uint32_t ICM20948::get_accel_resolution(float *accelRes) {
             *accelRes = 16.0f / 32768.0f;
             break;
     }
-
-    return OK;
-}
-
-/***************************************************************************//**
- * @brief
- *    Set gyroscope full scale
- *
- * @param[in] gyroFs
- *    Desired full scale value. Use ICM20948_GYRO_FULLSCALE macros.
- *
- * @return
- *    Return zero on OK, non-zero otherwise
- ******************************************************************************/
-uint32_t ICM20948::set_gyro_fullscale(uint8_t gyroFs) {
-    uint8_t reg;
-	
-	/* Calculate and save gyro resolution */
-	switch ( gyroFs ) {
-		case ICM20948_GYRO_FULLSCALE_250DPS:
-			m_gyroRes = 250.0f / 32768.0f;
-			break;
-		case ICM20948_GYRO_FULLSCALE_500DPS:
-			m_gyroRes = 500.0f / 32768.0f;
-			break;
-		case ICM20948_GYRO_FULLSCALE_1000DPS:
-			m_gyroRes = 1000.0f / 32768.0f;
-			break;
-		case ICM20948_GYRO_FULLSCALE_2000DPS:
-			m_gyroRes = 2000.0f / 32768.0f;
-			break;
-		default:
-			return ERROR;
-	}
-		
-    gyroFs &= ICM20948_MASK_GYRO_FULLSCALE;
-    read_register(ICM20948_REG_GYRO_CONFIG_1, 1, &reg);
-    reg &= ~(ICM20948_MASK_GYRO_FULLSCALE);
-    reg |= gyroFs;
-    write_register(ICM20948_REG_GYRO_CONFIG_1, reg);
-
-    return OK;
-}
-
-/***************************************************************************//**
- * @brief
- *    Set accelerometer full scale
- *
- * @param[in] accelFs
- *    Desired full scale value. Use ICM20948_ACCEL_FULLSCALE macros.
- *
- * @return
- *    Return zero on OK, non-zero otherwise
- ******************************************************************************/
-uint32_t ICM20948::set_accel_fullscale(uint8_t accelFs) {
-    uint8_t reg;
-
-    /* Calculate and save accel resolution */
-    switch ( accelFs ) {
-	    case ICM20948_ACCEL_FULLSCALE_2G:
-			m_accelRes = 2.0f / 32768.0f;
-			break;
-	    case ICM20948_ACCEL_FULLSCALE_4G:
-			m_accelRes = 4.0f / 32768.0f;
-			break;
-	    case ICM20948_ACCEL_FULLSCALE_8G:
-			m_accelRes = 8.0f / 32768.0f;
-			break;
-	    case ICM20948_ACCEL_FULLSCALE_16G:
-			m_accelRes = 16.0f / 32768.0f;
-			break;
-		default:
-			return ERROR;
-	}
-		
-    accelFs &= ICM20948_MASK_ACCEL_FULLSCALE;
-    read_register(ICM20948_REG_ACCEL_CONFIG, 1, &reg);
-    reg &= ~(ICM20948_MASK_ACCEL_FULLSCALE);
-    reg |= accelFs;
-    write_register(ICM20948_REG_ACCEL_CONFIG, reg);
 
     return OK;
 }
@@ -872,7 +878,7 @@ uint32_t ICM20948::enter_lowpowermode(bool enAccel, bool enGyro, bool enTemp) {
         /* Set LP_EN bit to enable low power mode */
         data |= ICM20948_BIT_LP_EN;
     } 
-	else {
+    else {
         /* Enable continuous mode */
         enable_cyclemode(false);
 
@@ -901,22 +907,22 @@ uint32_t ICM20948::enter_lowpowermode(bool enAccel, bool enGyro, bool enTemp) {
  ******************************************************************************/
 uint32_t ICM20948::enable_irq(bool dataReadyEnable, bool womEnable) {
     /* Enable one or both of interrupt sources if required */
-	if ( dataReadyEnable ) {
-		write_register(ICM20948_REG_INT_ENABLE_1, ICM20948_BIT_RAW_DATA_0_RDY_EN);
-	}
-	else {
-		write_register(ICM20948_REG_INT_ENABLE_1, 0);
-	}
-	
-	if ( womEnable ) {
+    if ( dataReadyEnable ) {
+        write_register(ICM20948_REG_INT_ENABLE_1, ICM20948_BIT_RAW_DATA_0_RDY_EN);
+    }
+    else {
+        write_register(ICM20948_REG_INT_ENABLE_1, 0);
+    }
+    
+    if ( womEnable ) {
         write_register(ICM20948_REG_INT_ENABLE, ICM20948_BIT_WOM_INT_EN);
     }
-	else {
-		write_register(ICM20948_REG_INT_ENABLE, 0);
-	}
-	
-	/* INT pin: active low, open drain, IT status read clears. It seems that latched mode does not work, the INT pin cannot be cleared if set */
-	write_register(ICM20948_REG_INT_PIN_CFG, ICM20948_BIT_INT_ACTL | ICM20948_BIT_INT_OPEN);
+    else {
+        write_register(ICM20948_REG_INT_ENABLE, 0);
+    }
+    
+    /* INT pin: active low, open drain, IT status read clears. It seems that latched mode does not work, the INT pin cannot be cleared if set */
+    write_register(ICM20948_REG_INT_PIN_CFG, ICM20948_BIT_INT_ACTL | ICM20948_BIT_INT_OPEN);
 
     return OK;
 }
@@ -994,7 +1000,7 @@ uint32_t ICM20948::enable_wake_on_motion(bool enable, uint8_t womThreshold, uint
         enable_sensor(true, false, false);
 
         /* Set sample rate */
-		set_accel_sample_rate_div(accelDiv);
+        set_accel_sample_rate_div(accelDiv);
 
         /* Set bandwidth to 1210Hz */
         set_accel_bandwidth(ICM20948_ACCEL_BW_1210HZ);
@@ -1014,7 +1020,7 @@ uint32_t ICM20948::enable_wake_on_motion(bool enable, uint8_t womThreshold, uint
 
         /* Enable low power mode */
         enter_lowpowermode(true, false, false);
-	} else {
+    } else {
         /* Disable Wake On Motion feature */
         write_register(ICM20948_REG_ACCEL_INTEL_CTRL, 0x00);
 
@@ -1039,7 +1045,7 @@ uint32_t ICM20948::enable_wake_on_motion(bool enable, uint8_t womThreshold, uint
  *    Measured acceleration sensor bias in mg
  *
  * @param[out] gyroBiasScaled
- *    Measured gyro sensor bias in deg/sec
+ *    Measured gyro sensor bias in deg/s
  *
  * @return
  *    Return zero on OK, non-zero otherwise
@@ -1060,14 +1066,14 @@ uint32_t ICM20948::calibrate(float *accelBiasScaled, float *gyroBiasScaled) {
 
     /* Set sample rates */
     set_gyro_sample_rate_div(0);
-	set_accel_sample_rate_div(0);
+    set_accel_sample_rate_div(0);
 
     /* 246Hz BW for accelerometer and 200Hz for gyroscope */
     set_gyro_bandwidth(ICM20948_GYRO_BW_12HZ);
     set_accel_bandwidth(ICM20948_ACCEL_BW_246HZ);
 
     /* Set most sensitive range: 2G full scale and 250dps full scale */
-	set_gyro_fullscale(ICM20948_GYRO_FULLSCALE_250DPS);
+    set_gyro_fullscale(ICM20948_GYRO_FULLSCALE_250DPS);
     set_accel_fullscale(ICM20948_ACCEL_FULLSCALE_2G);
 
     /* Retrieve resolution per bit */
@@ -1151,7 +1157,7 @@ uint32_t ICM20948::calibrate(float *accelBiasScaled, float *gyroBiasScaled) {
         accelBias[2] += (int32_t) (1.0f / accelRes);
     }
 
-    /* Convert values to degrees per sec for displaying */
+    /* Convert values to deg/s for displaying */
     gyroBiasScaled[0] = (float) gyroBias[0] * gyroRes;
     gyroBiasScaled[1] = (float) gyroBias[1] * gyroRes;
     gyroBiasScaled[2] = (float) gyroBias[2] * gyroRes;
@@ -1248,7 +1254,7 @@ uint32_t ICM20948::calibrate(float *accelBiasScaled, float *gyroBiasScaled) {
  *    the static offset error.
  *
  * @param[out] gyroBiasScaled
- *    Measured gyro sensor bias in deg/sec
+ *    Measured gyro sensor bias in deg/s
  *
  * @return
  *    Return zero on OK, non-zero otherwise
@@ -1339,7 +1345,7 @@ uint32_t ICM20948::calibrate_gyro(float *gyroBiasScaled) {
     gyroBias[1] /= packetCount;
     gyroBias[2] /= packetCount;
 
-    /* Convert values to degrees per sec for displaying */
+    /* Convert values to deg/s for displaying */
     gyroBiasScaled[0] = (float) gyroBias[0] * gyroRes;
     gyroBiasScaled[1] = (float) gyroBias[1] * gyroRes;
     gyroBiasScaled[2] = (float) gyroBias[2] * gyroRes;
@@ -1386,36 +1392,10 @@ uint32_t ICM20948::calibrate_gyro(float *gyroBiasScaled) {
     return OK;
 }
 
-/***************************************************************************//**
- * @brief
- *    Read temperature sensor raw value and convert it to Celsius.
- *
- * @param[out] temperature
- *    Measured temperature in Celsius
- *
- * @return
- *    Return zero on OK, non-zero otherwise
- ******************************************************************************/
-uint32_t ICM20948::read_temperature(float *temperature) {
-    uint8_t data[2];
-    int16_t raw_temp;
-
-    /* Read temperature registers */
-    read_register(ICM20948_REG_TEMPERATURE_H, 2, data);
-
-    /* Convert to int16 */
-    raw_temp = (int16_t) ( (data[0] << 8) + data[1]);
-
-    /* Calculate Celsius value from raw reading */
-    *temperature = ( (float) raw_temp / 333.87f) + 21.0f;
-
-    return OK;
-}
-
 /** Create an ICM20948_SPI object connected to specified SPI pins
  *
- * @param[in] csPin		SPI Chip Select pin.
- * @param[in] spiPort	SPI port.
+ * @param[in] csPin     SPI Chip Select pin.
+ * @param[in] spiPort   SPI port.
  * 
  */
 ICM20948_SPI::ICM20948_SPI(uint8_t csPin, SPIClass &spiPort) {
