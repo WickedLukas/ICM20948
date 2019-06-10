@@ -82,7 +82,7 @@
 
 #define ICM20948_REG_INT_PIN_CFG            (ICM20948_BANK_0 | 0x0F)    /**< Interrupt Pin Configuration register                   */
 #define ICM20948_BIT_INT_ACTL               0x80                        /**< Active low setting bit                                 */
-#define ICM20948_BIT_INT_OPEN               0x40                        /**< Open collector configuration bit                        */
+#define ICM20948_BIT_INT_OPEN               0x40                        /**< Open collector configuration bit                       */
 #define ICM20948_BIT_INT_LATCH_EN           0x20                        /**< Latch enable bit                                       */
 
 #define ICM20948_REG_INT_ENABLE             (ICM20948_BANK_0 | 0x10)    /**< Interrupt Enable register                              */
@@ -97,11 +97,11 @@
 #define ICM20948_REG_INT_ENABLE_3           (ICM20948_BANK_0 | 0x13)    /**< Interrupt Enable 2 register                            */
 
 #define ICM20948_REG_INT_STATUS             (ICM20948_BANK_0 | 0x19)    /**< Interrupt Status register                              */
-#define ICM20948_BIT_WOM_INT                0x08                        /**< Wake-up on motion interrupt occured bit                */
-#define ICM20948_BIT_PLL_RDY                0x04                        /**< PLL ready interrupt occured bit                        */
+#define ICM20948_BIT_WOM_INT                0x08                        /**< Wake-up on motion interrupt bit                        */
+#define ICM20948_BIT_PLL_RDY                0x04                        /**< PLL ready interrupt bit                                */
 
 #define ICM20948_REG_INT_STATUS_1           (ICM20948_BANK_0 | 0x1A)    /**< Interrupt Status 1 register                            */
-#define ICM20948_BIT_RAW_DATA_0_RDY_INT     0x01                        /**< Raw data ready interrupt occured bit                   */
+#define ICM20948_BIT_RAW_DATA_0_RDY_INT     0x01                        /**< Raw data ready interrupt bit                           */
 
 #define ICM20948_REG_INT_STATUS_2           (ICM20948_BANK_0 | 0x1B)    /**< Interrupt Status 2 register                            */
 
@@ -299,12 +299,12 @@
 
 #define AK09916_REG_CONTROL_2               0x31                        /**< Control 2 register                     */
 #define AK09916_BIT_MODE_POWER_DOWN         0x00                        /**< Power-down                             */
-#define AK09916_BIT_MODE_SINGLE             0x01                        /**< Magnetometer takes one measurement     */
-#define AK09916_BIT_MODE_10HZ               0x02                        /**< Magnetometer Measurement Rate = 10HZ   */
-#define AK09916_BIT_MODE_20HZ               0x04                        /**< Magnetometer Measurement Rate = 20HZ   */
-#define AK09916_BIT_MODE_50HZ               0x06                        /**< Magnetometer Measurement Rate = 50HZ   */
-#define AK09916_BIT_MODE_100HZ              0x08                        /**< Magnetometer Measurement Rate = 100HZ  */
-#define AK09916_BIT_MODE_ST                 0x16                        /**< Self-test                              */
+#define AK09916_MODE_SINGLE                 0x01                        /**< Magnetometer takes one measurement     */
+#define AK09916_MODE_10HZ                   0x02                        /**< Magnetometer Measurement Rate = 10HZ   */
+#define AK09916_MODE_20HZ                   0x04                        /**< Magnetometer Measurement Rate = 20HZ   */
+#define AK09916_MODE_50HZ                   0x06                        /**< Magnetometer Measurement Rate = 50HZ   */
+#define AK09916_MODE_100HZ                  0x08                        /**< Magnetometer Measurement Rate = 100HZ  */
+#define AK09916_MODE_ST                     0x16                        /**< Self-test                              */
 
 #define AK09916_REG_CONTROL_3               0x31                        /**< Control 3 register                     */
 #define AK09916_BIT_SRST                    0x01                        /**< Soft Reset bit                         */
@@ -371,17 +371,30 @@ public:
 
     /** Probe for ICM20948 and try to initialize sensor
      *
-     * @returns
+     * @return
      *   'true' if successful,
      *   'false' on error.
      */
     bool init();
 
-    /** Read sensors
+    /** Read sensors raw data
      *
-     * @returns true if measurement was successful
+     * @param[out] accel_x Accelerometer raw measurement on X axis
+     * @param[out] accel_y Accelerometer raw measurement on Y axis
+     * @param[out] accel_z Accelerometer raw measurement on Z axis
+     * @param[out] gyro_x Gyroscope raw measurement on X axis
+     * @param[out] gyro_y Gyroscope raw measurement on Y axis
+     * @param[out] gyro_z Gyroscope raw measurement on Z axis
+     * @param[out] temperature Temperature raw measurement
+     * @param[out] mag_x Magnetometer raw measurement on X axis
+     * @param[out] mag_y Magnetometer raw measurement on Y axis
+     * @param[out] mag_z Magnetometer raw measurement on Z axis
+     *
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
      */
-    bool read();
+    bool read_sensors(int16_t &accel_x, int16_t &accel_y, int16_t &accel_z, int16_t &gyro_x, int16_t &gyro_y, int16_t &gyro_z, int16_t &temperature, int16_t &mag_x, int16_t &mag_y, int16_t &mag_z);
 
     /** Read gyroscope raw data
      *
@@ -390,7 +403,8 @@ public:
      * @param[out] gyro_z Gyroscope raw measurement on Z axis
      *
      * @return
-     *    Return zero on OK, non-zero otherwise
+     *   'true' if successful,
+     *   'false' on error.
      */
     bool read_gyro(int16_t &gyro_x, int16_t &gyro_y, int16_t &gyro_z);
 
@@ -401,7 +415,8 @@ public:
      * @param[out] accel_z Accelerometer raw measurement on Z axis
      *
      * @return
-     *    Return zero on OK, non-zero otherwise
+     *   'true' if successful,
+     *   'false' on error.
      */
     bool read_accel(int16_t &accel_x, int16_t &accel_y, int16_t &accel_z);
 
@@ -412,7 +427,8 @@ public:
      * @param[out] mag_z Magnetometer raw measurement on Z axis
      *
      * @return
-     *    Return zero on OK, non-zero otherwise
+     *   'true' if successful,
+     *   'false' on error.
      */
     bool read_mag(int16_t &mag_x, int16_t &mag_y, int16_t &mag_z);
 
@@ -422,7 +438,8 @@ public:
      *    Temperature raw measurement
      *
      * @return
-     *    Return zero on OK, non-zero otherwise
+     *   'true' if successful,
+     *   'false' on error.
      */
     bool read_temperature(int16_t &temperature);
 
@@ -432,7 +449,9 @@ public:
      * @param[out] gyr_y Gyroscope measurement on Y axis in deg/s
      * @param[out] gyr_z Gyroscope measurement on Z axis in deg/s
      *
-     * @return true if measurement was successful
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
      */
     bool read_gyro_dps(float &gyro_x_dps, float &gyro_y_dps, float &gyro_z_dps);
     
@@ -442,7 +461,9 @@ public:
      * @param[out] accel_y Accelerometer measurement on Y axis in g
      * @param[out] accel_z Accelerometer measurement on Z axis in g
      *
-     * @return true if measurement was successful
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
      */
      bool read_accel_g(float &accel_x_g, float &accel_y_g, float &accel_z_g);
 
@@ -451,7 +472,9 @@ public:
      * @param [out] temperature_c
      *    Temperature measurement in Celsius
      *
-     * @return true if measurement was successful
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
      */
     bool read_temperature_c(float &temperature_c);
 
@@ -478,18 +501,19 @@ private:
     uint32_t        set_accel_bandwidth(uint8_t accelBw);
     uint32_t        set_gyro_fullscale(uint8_t gyroFs);
     uint32_t        set_accel_fullscale(uint8_t accelFs);
+    uint32_t        set_mag_mode(uint8_t magMode);
     uint32_t        get_gyro_resolution(float *gyroRes);
     uint32_t        get_accel_resolution(float *accelRes);
     uint32_t        enable_sleepmode(bool enable);
     uint32_t        enable_cyclemode(bool enable);
     uint32_t        enable_sensor(bool accel, bool gyro, bool temp);
-    uint32_t        enter_lowpowermode(bool enAccel, bool enGyro, bool enTemp);
-    uint32_t        enable_irq(bool dataReadyEnable, bool womEnable);
-    uint32_t        read_irqstatus(uint32_t *int_status);
-    bool            is_data_ready(void);
+    uint32_t        enable_lowpowermode(bool enAccel, bool enGyro, bool enTemp);
     uint32_t        enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv);
     uint32_t        calibrate(float *accelBiasScaled, float *gyroBiasScaled);
     uint32_t        calibrate_gyro(float *gyroBiasScaled);
+    uint32_t        enable_irq(bool dataReadyEnable, bool womEnable);
+    uint32_t        read_irqstatus(uint32_t *int_status);
+    bool            is_data_ready(void);
 };
 
 class ICM20948_SPI : public ICM20948 {
