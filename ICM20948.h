@@ -315,47 +315,6 @@
 
 /** @endcond */
 
-
-/** ICM20948 class.
- *  Used for taking accelerometer and gyroscope measurements.
- *
- * Example:
- * @code
- * //#include "mbed.h"
- * #include "ICM20948.h"
- *
- * //Create an ICM20948 object
- * ICM20948 sensor(PC4, PC5);
- *
- * int main()
- * {
- *     //Try to open ICM20948
- *     if (sensor.open()) {
- *         printf("Device detected!\n");
- *
- *         while (1) {
- *             float acc_x, acc_y, acc_z;
- *             float gyr_x, gyr_y, gyr_z;
- *             
- *             sensor.measure();
- *
- *             sensor.get_accelerometer(&acc_x, &acc_y, &acc_z);
- *             sensor.get_gyroscope(&gyr_x, &gyr_y, &gyr_z);
- *
- *             //Print current accelerometer measurement
- *             printf("acc: %.3f  %.3f  %.3f\n", acc_x, acc_y, acc_z);
- *             //Print current gyroscope measurement
- *             printf("gyr: %.3f  %.3f  %.3f\n", gyr_x, gyr_y, gyr_z);
- *
- *             //Sleep for 0.5 seconds
- *             wait(0.5);
- *         }
- *     } else {
- *         error("Device not detected!\n");
- *     }
- * }
- * @endcode
- */
 class ICM20948 {
 
 public:
@@ -517,15 +476,16 @@ private:
 };
 
 class ICM20948_SPI : public ICM20948 {
-    
+
 public:
-    /** Create an ICM20948_SPI object connected to specified SPI pins
+    /** Create an ICM20948_SPI object connected to specified SPI pins and with specified SPI settings
      *
-     * @param[in] csPin     SPI Chip Select pin.
-     * @param[in] spiPort   SPI port.
+     * @param[in] CS_PIN        SPI chip select pin.
+     * @param[in] SPI_PORT      SPI port.
+     * @param[in] SPI_SETTINGS  SPI clock, bit order and data mode setting.
      * 
      */
-    ICM20948_SPI(uint8_t csPin, SPIClass &spiPort = SPI);
+    ICM20948_SPI(uint8_t CS_PIN, const SPIClass &SPI_PORT = SPI, const SPISettings &SPI_SETTINGS = SPISettings(7000000, MSBFIRST, SPI_MODE3));
     
     /**
      * ICM20948_SPI destructor
@@ -534,9 +494,9 @@ public:
 
 private:
     /* SPI variables */
-    uint8_t         m_CS;
-    SPIClass*       m_SPI;
-    SPISettings     m_SPISettings;
+    const uint8_t       m_CS_PIN;
+    const SPIClass      &m_SPI_PORT;
+    const SPISettings   &m_SPI_SETTINGS;
     
     /* Private functions */
     void            read_register(uint16_t addr, uint8_t numBytes, uint8_t *data);
