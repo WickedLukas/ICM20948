@@ -45,24 +45,35 @@ bool ICM20948::init() {
     uint8_t data[7];
 
     //reset();
-
+    
     /* Reset I2C Slave module and use SPI */
     /* Enable I2C Master I/F module */
     write_register(ICM20948_REG_USER_CTRL, ICM20948_BIT_I2C_IF_DIS | ICM20948_BIT_I2C_MST_EN);
-
+    
     /* Read "Who am I" register */
     read_register(ICM20948_REG_WHO_AM_I, 1, &data[0]);
-
+    
     /* Check if "Who am I" register was successfully read */
     if (data[0] != ICM20948_DEVICE_ID) {
+        delay(1000);
+        Serial.println("ERROR_ICM20948");
+        delay(1000);
         return ERROR;
     }
+    delay(1000);
+    Serial.println("ICM20948");
+    Serial.println(data[0]);
+    delay(1000);
     
     /* Read AK09916 "Who am I" register */
     read_mag_register(AK09916_REG_WHO_AM_I, 1, &data[0]);
     
     /* Check if AK09916 "Who am I" register was successfully read */
     if (data[0] != AK09916_DEVICE_ID) {
+        delay(1000);
+        Serial.println("ERROR_AK09916");
+        Serial.println(data[0]);
+        delay(1000);
         return ERROR;
     }
     
@@ -320,20 +331,20 @@ void ICM20948_SPI::read_register(uint16_t addr, uint8_t numBytes, uint8_t *data)
 
     select_bank(bank);
     
-    /* Enable chip select */
-    digitalWrite(m_CS_PIN, LOW);
+    m_port.beginTransaction(SPISettings(M_CLOCK, M_BIT_ORDER, M_DATA_MODE));
     
-    m_SPI_PORT.beginTransaction(m_SPI_SETTINGS);
+    /* Enable chip select */
+    digitalWrite(M_CS_PIN, LOW);
     
     /* Transfer address with read-bit set */
-    m_SPI_PORT.transfer(regAddr | 0x80);
+    m_port.transfer(regAddr | 0x80);
     /* Receive data array */
-    m_SPI_PORT.transfer(data, numBytes);
-    
-    m_SPI_PORT.endTransaction();
-    
+    m_port.transfer(data, numBytes);
+
     /* Disable chip select */
-    digitalWrite(m_CS_PIN, HIGH);
+    digitalWrite(M_CS_PIN, HIGH);
+    
+    m_port.endTransaction();
 
     return;
 }
@@ -356,26 +367,26 @@ void ICM20948_SPI::read_register(uint16_t addr, uint8_t numBytes, uint8_t *data)
 void ICM20948_SPI::write_register(uint16_t addr, uint8_t data) {
     static uint8_t regAddr;
     static uint8_t bank;
-
+    
     regAddr = (uint8_t) (addr & 0x7F);
     bank = (uint8_t) (addr >> 7);
 
     select_bank(bank);
-
-    /* Enable chip select */
-    digitalWrite(m_CS_PIN, LOW);
     
-    m_SPI_PORT.beginTransaction(m_SPI_SETTINGS);
+    m_port.beginTransaction(SPISettings(M_CLOCK, M_BIT_ORDER, M_DATA_MODE));
+    
+    /* Enable chip select */
+    digitalWrite(M_CS_PIN, LOW);
     
     /* Transfer address without read-bit set */
-    m_SPI_PORT.transfer(regAddr);
+    m_port.transfer(regAddr);
     /* Send data byte */
-    m_SPI_PORT.transfer(data);
-    
-    m_SPI_PORT.endTransaction();
+    m_port.transfer(data);
     
     /* Disable chip select */
-    digitalWrite(m_CS_PIN, HIGH);
+    digitalWrite(M_CS_PIN, HIGH);
+    
+    m_port.endTransaction();
 
     return;
 }
@@ -395,20 +406,20 @@ void ICM20948_SPI::select_bank(uint8_t bank) {
     
     /* Select bank if it has changed */
     if (bank != bank_old) {
-        /* Enable chip select */
-        digitalWrite(m_CS_PIN, LOW);
+        m_port.beginTransaction(SPISettings(M_CLOCK, M_BIT_ORDER, M_DATA_MODE));
         
-        m_SPI_PORT.beginTransaction(m_SPI_SETTINGS);
+        /* Enable chip select */
+        digitalWrite(M_CS_PIN, LOW);
         
         /* Transfer address without read-bit set */
-        m_SPI_PORT.transfer(ICM20948_REG_BANK_SEL);
+        m_port.transfer(ICM20948_REG_BANK_SEL);
         /* Send data byte */
-        m_SPI_PORT.transfer(bank << 4);
-        
-        m_SPI_PORT.endTransaction();
+        m_port.transfer(bank << 4);
         
         /* Disable chip select */
-        digitalWrite(m_CS_PIN, HIGH);
+        digitalWrite(M_CS_PIN, HIGH);
+        
+        m_port.endTransaction();
         
         bank_old = bank;
     }
@@ -472,7 +483,7 @@ void ICM20948::read_mag_register(uint8_t addr, uint8_t numBytes, uint8_t *data) 
     write_register(ICM20948_REG_I2C_SLV0_CTRL, ICM20948_BIT_I2C_SLV_EN | numBytes);
     
     /* Wait some time for registers to fill */
-    delay(1);
+    delay(1000);
     
     /* Read bytes from the ICM-20948 EXT_SLV_SENS_DATA registers */
     read_register(ICM20948_REG_EXT_SLV_SENS_DATA_00, numBytes, data); 
@@ -1506,17 +1517,19 @@ bool ICM20948::is_data_ready(void) {
     return ready;
 }
 
-/** Create an ICM20948_SPI object connected to specified SPI pins and with specified SPI settings
+/** Create an ICM20948_SPI object connected to specified SPI pins and with specified SPI settings for clock, bit order and data mode
  *
- * @param[in] CS_PIN        SPI chip select pin.
- * @param[in] SPI_PORT      SPI port.
- * @param[in] SPI_SETTINGS  SPI clock, bit order and data mode setting.
+ * @param[in] cs_pin    SPI chip select pin.
+ * @param[in] spi_port  SPI port.
+ * @param[in] clock     SPI clock.
+ * @param[in] bit_order SPI bit order.
+ * @param[in] data_mode SPI data mode.
  * 
  */
-ICM20948_SPI::ICM20948_SPI(uint8_t CS_PIN, const SPIClass &SPI_PORT, const SPISettings &SPI_SETTINGS) : m_CS_PIN(CS_PIN), m_SPI_PORT(SPI_PORT), m_SPI_SETTINGS(SPI_SETTINGS) {
+ICM20948_SPI::ICM20948_SPI(uint8_t cs_pin, SPIClass &port, uint32_t clock, uint8_t bit_order, uint8_t data_mode) : M_CS_PIN(cs_pin), m_port(port), M_CLOCK(clock), M_BIT_ORDER(bit_order), M_DATA_MODE(data_mode) {
     /* setup chip select pin */
-    pinMode(m_CS_PIN, OUTPUT);
-    digitalWrite(m_CS_PIN, HIGH);
+    pinMode(M_CS_PIN, OUTPUT);
+    digitalWrite(M_CS_PIN, HIGH);
 }
 
 /**

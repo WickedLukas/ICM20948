@@ -478,14 +478,16 @@ private:
 class ICM20948_SPI : public ICM20948 {
 
 public:
-    /** Create an ICM20948_SPI object connected to specified SPI pins and with specified SPI settings
+    /** Create an ICM20948_SPI object connected to specified SPI pins and with specified SPI settings for clock, bit order and data mode
      *
-     * @param[in] CS_PIN        SPI chip select pin.
-     * @param[in] SPI_PORT      SPI port.
-     * @param[in] SPI_SETTINGS  SPI clock, bit order and data mode setting.
+     * @param[in] cs_pin    SPI chip select pin.
+     * @param[in] port      SPI port.
+     * @param[in] clock     SPI clock.
+     * @param[in] bit_order SPI bit order.
+     * @param[in] data_mode SPI data mode.
      * 
      */
-    ICM20948_SPI(uint8_t CS_PIN, const SPIClass &SPI_PORT = SPI, const SPISettings &SPI_SETTINGS = SPISettings(7000000, MSBFIRST, SPI_MODE3));
+    ICM20948_SPI(uint8_t cs_pin, SPIClass &port = SPI, uint32_t clock = 7000000, uint8_t bit_order = MSBFIRST, uint8_t data_mode = SPI_MODE3);
     
     /**
      * ICM20948_SPI destructor
@@ -494,9 +496,11 @@ public:
 
 private:
     /* SPI variables */
-    const uint8_t       m_CS_PIN;
-    const SPIClass      &m_SPI_PORT;
-    const SPISettings   &m_SPI_SETTINGS;
+    const uint8_t   M_CS_PIN;
+    SPIClass        &m_port;
+    const uint32_t  M_CLOCK;
+    const uint8_t   M_BIT_ORDER;
+    const uint8_t   M_DATA_MODE;
     
     /* Private functions */
     void            read_register(uint16_t addr, uint8_t numBytes, uint8_t *data);
