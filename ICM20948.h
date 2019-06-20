@@ -233,6 +233,7 @@
 
 #define ICM20948_REG_I2C_MST_CTRL           (ICM20948_BANK_3 | 0x01)    /**< I2C Master Control register                        */
 #define ICM20948_BIT_I2C_MST_P_NSR          0x10                        /**< Stop between reads enabling bit                    */
+#define ICM20948_I2C_MST_CTRL_CLK_400KHZ    0x07                        /**< I2C_MST_CLK = 345.6 kHz (for 400 kHz Max)          */
 
 #define ICM20948_REG_I2C_MST_DELAY_CTRL     (ICM20948_BANK_3 | 0x02)    /**< I2C Master Delay Control register                  */
 #define ICM20948_BIT_SLV0_DLY_EN            0x01                        /**< I2C Slave0 Delay Enable bit                        */

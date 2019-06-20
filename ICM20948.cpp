@@ -43,66 +43,65 @@ ICM20948::~ICM20948(void) {
 */
 bool ICM20948::init() {
     uint8_t data[7];
-
-    //reset();
+    
+    /* Reset ICM20948 */
+    reset();
+    
+    /* Auto select best available clock source PLL if ready, else use internal oscillator */
+    write_register(ICM20948_REG_PWR_MGMT_1, ICM20948_BIT_CLK_PLL);
+    
+    /* PLL startup time - no spec in data sheet */
+    delay(10);
     
     /* Reset I2C Slave module and use SPI */
     /* Enable I2C Master I/F module */
     write_register(ICM20948_REG_USER_CTRL, ICM20948_BIT_I2C_IF_DIS | ICM20948_BIT_I2C_MST_EN);
     
-    /* Read "Who am I" register */
-    read_register(ICM20948_REG_WHO_AM_I, 1, &data[0]);
+    /* Set I2C Master clock frequency */
+    write_register(ICM20948_REG_I2C_MST_CTRL, ICM20948_I2C_MST_CTRL_CLK_400KHZ);
     
+    /* Read ICM20948 "Who am I" register */
+    read_register(ICM20948_REG_WHO_AM_I, 1, &data[0]);
+        
     /* Check if "Who am I" register was successfully read */
     if (data[0] != ICM20948_DEVICE_ID) {
-        delay(1000);
-        Serial.println("ERROR_ICM20948");
-        delay(1000);
         return ERROR;
     }
-    delay(1000);
-    Serial.println("ICM20948");
-    Serial.println(data[0]);
-    delay(1000);
+    
+    /* Disable bypass for I2C_MASTER interface pins */
+    this->enable_irq(false, false);
     
     /* Read AK09916 "Who am I" register */
     read_mag_register(AK09916_REG_WHO_AM_I, 1, &data[0]);
     
     /* Check if AK09916 "Who am I" register was successfully read */
     if (data[0] != AK09916_DEVICE_ID) {
-        delay(1000);
-        Serial.println("ERROR_AK09916");
-        Serial.println(data[0]);
-        delay(1000);
         return ERROR;
     }
     
     // TODO: odr_align_en to sync sample rates seems not to be necessary
-    /* configure gyroscope */
+    
+    /* Configure gyroscope */
     this->set_gyro_bandwidth(ICM20948_GYRO_BW_12100HZ);
     this->set_gyro_fullscale(ICM20948_GYRO_FULLSCALE_1000DPS);
     //this->set_gyro_sample_rate_div(...);    /* the gyroscope sample rate is 9000 Hz for ICM20948_GYRO_BW_12100HZ */
     
-    /* configure accelerometer */
+    /* Configure accelerometer */
     this->set_accel_bandwidth(ICM20948_ACCEL_BW_1210HZ);
     this->set_accel_fullscale(ICM20948_ACCEL_FULLSCALE_8G);
     //this->set_accel_sample_rate_div(...);    /* the accelerometer sample rate is 4500 Hz for ICM20948_ACCEL_BW_1210HZ */
     
-    /* configure magnetometer */
+    /* Configure magnetometer */
     this->set_mag_mode(AK09916_MODE_100HZ);
     
     /* Instruct the ICM20948 to get data from the magnetometer */ 
     read_mag_register(AK09916_REG_HXL, 7, &data[0]);
     
-    /* Auto select best available clock source PLL if ready, else use internal oscillator */
-    write_register(ICM20948_REG_PWR_MGMT_1, ICM20948_BIT_CLK_PLL);
-    
-    /* PLL startup time - maybe it is too long, but better stay on the safe side - no spec in data sheet */
-    delay(30);
-    
-    // TODO: make it configurable
+    // TODO: make this configurable
     /* Enable Raw Data Ready interrupt */
     this->enable_irq(true, false);
+    
+    delay(50);
     
     return true;
 }
@@ -483,9 +482,9 @@ void ICM20948::read_mag_register(uint8_t addr, uint8_t numBytes, uint8_t *data) 
     write_register(ICM20948_REG_I2C_SLV0_CTRL, ICM20948_BIT_I2C_SLV_EN | numBytes);
     
     /* Wait some time for registers to fill */
-    delay(1000);
+    delay(10);
     
-    /* Read bytes from the ICM-20948 EXT_SLV_SENS_DATA registers */
+    /* Read bytes from the ICM20948 EXT_SLV_SENS_DATA registers */
     read_register(ICM20948_REG_EXT_SLV_SENS_DATA_00, numBytes, data); 
     
     return;
@@ -768,7 +767,7 @@ uint32_t ICM20948::set_mag_mode(uint8_t magMode){
             return ERROR;
     }
     
-    write_register(AK09916_REG_CONTROL_2, magMode);
+    write_mag_register(AK09916_REG_CONTROL_2, magMode);
     
     return OK;
 }
