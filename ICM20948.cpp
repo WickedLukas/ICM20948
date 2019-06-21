@@ -62,15 +62,15 @@ bool ICM20948::init() {
     
     /* Read ICM20948 "Who am I" register */
     read_register(ICM20948_REG_WHO_AM_I, 1, &data[0]);
-        
+    
     /* Check if "Who am I" register was successfully read */
     if (data[0] != ICM20948_DEVICE_ID) {
         return ERROR;
     }
     
-    /* Disable bypass for I2C_MASTER interface pins */
+    /* Disable bypass for I2C Master interface pins */
     this->enable_irq(false, false);
-    
+         
     /* Read AK09916 "Who am I" register */
     read_mag_register(AK09916_REG_WHO_AM_I, 1, &data[0]);
     
@@ -78,7 +78,7 @@ bool ICM20948::init() {
     if (data[0] != AK09916_DEVICE_ID) {
         return ERROR;
     }
-    
+     
     // TODO: odr_align_en to sync sample rates seems not to be necessary
     
     /* Configure gyroscope */
@@ -94,15 +94,13 @@ bool ICM20948::init() {
     /* Configure magnetometer */
     this->set_mag_mode(AK09916_MODE_100HZ);
     
-    /* Instruct the ICM20948 to get data from the magnetometer */ 
-    read_mag_register(AK09916_REG_HXL, 7, &data[0]);
-    
-    // TODO: make this configurable
+    /* Instruct the ICM20948 to get data from the magnetometer */
+    /* Reading the magnetometer ST2 register is necessary, because else the data is not updated */
+    read_mag_register(AK09916_REG_HXL, 8, &data[0]);
+        
     /* Enable Raw Data Ready interrupt */
     this->enable_irq(true, false);
-    
-    delay(50);
-    
+     
     return true;
 }
 
@@ -516,6 +514,9 @@ void ICM20948::write_mag_register(uint8_t addr, uint8_t data) {
     
     /* Send one byte */
     write_register(ICM20948_REG_I2C_SLV0_CTRL, ICM20948_BIT_I2C_SLV_EN | 0x01);
+    
+    /* Wait some time for registers to fill */
+    delay(10);
     
     return;
 }
