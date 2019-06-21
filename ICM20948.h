@@ -402,12 +402,31 @@ public:
      *   'false' on error.
      */
     bool read_temperature(int16_t &temperature);
+    
+    /** Read sensors in units
+     *
+     * @param[out] accel_x_g Accelerometer measurement on X axis in g
+     * @param[out] accel_y_g Accelerometer measurement on Y axis in g
+     * @param[out] accel_z_g Accelerometer measurement on Z axis in g
+     * @param[out] gyro_x_dps Gyroscope measurement on X axis in deg/s
+     * @param[out] gyro_y_dps Gyroscope measurement on Y axis in deg/s
+     * @param[out] gyro_z_dps Gyroscope measurement on Z axis in deg/s
+     * @param[out] temperature_c Temperature measurement in Celsius
+     * @param[out] mag_x_ut Magnetometer measurement on X axis in uT
+     * @param[out] mag_y_ut Magnetometer measurement on Y axis in uT
+     * @param[out] mag_z_ut Magnetometer measurement on Z axis in uT
+     *
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
+     */
+    bool read_sensors_units(float &accel_x_g, float &accel_y_g, float &accel_z_g, float &gyro_x_dps, float &gyro_y_dps, float &gyro_z_dps, float &temperature_c, float &mag_x_ut, float &mag_y_ut, float &mag_z_ut);
 
     /** read gyroscope in deg/s
      *
-     * @param[out] gyr_x Gyroscope measurement on X axis in deg/s
-     * @param[out] gyr_y Gyroscope measurement on Y axis in deg/s
-     * @param[out] gyr_z Gyroscope measurement on Z axis in deg/s
+     * @param[out] gyr_x_dps Gyroscope measurement on X axis in deg/s
+     * @param[out] gyr_y_dps Gyroscope measurement on Y axis in deg/s
+     * @param[out] gyr_z_dps Gyroscope measurement on Z axis in deg/s
      *
      * @return
      *   'true' if successful,
@@ -417,9 +436,9 @@ public:
     
     /** Read accelerometer in g
      *
-     * @param[out] accel_x Accelerometer measurement on X axis in g
-     * @param[out] accel_y Accelerometer measurement on Y axis in g
-     * @param[out] accel_z Accelerometer measurement on Z axis in g
+     * @param[out] accel_x_g Accelerometer measurement on X axis in g
+     * @param[out] accel_y_g Accelerometer measurement on Y axis in g
+     * @param[out] accel_z_g Accelerometer measurement on Z axis in g
      *
      * @return
      *   'true' if successful,
@@ -429,20 +448,35 @@ public:
 
     /** Read temperature in Celsius
      *
-     * @param [out] temperature_c
-     *    Temperature measurement in Celsius
+     * @param [out] temperature_c Temperature measurement in Celsius
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
     bool read_temperature_c(float &temperature_c);
+    
+    /** Read magnetometer in uT
+     *
+     * @param[out] mag_x_uT Magnetometer measurement on X axis in uT
+     * @param[out] mag_y_uT Magnetometer measurement on Y axis in uT
+     * @param[out] mag_z_uT Magnetometer measurement on Z axis in uT
+     *
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
+     */
+    bool read_mag_ut(float &mag_x_uT, float &mag_y_uT, float &mag_z_uT);
 
 private:
     /* Private variables */
     float           m_gyroRes;
     float           m_accelRes;
-    const float     m_magRes = 4912.0f / 32752.0f;    /**    Measurement range of each axis +-4912 uT is saved in 16 bit output +-32752    */
+    const float     m_magRes = 4912.0f / 32752.0f;    /*    Measurement range of each axis +-4912 uT is saved in 16 bit output +-32752    */
+    /*  TODO: transform the magnetometer values to match the coordinate system of the IMU???
+        {1,  0,  0};
+        {0, -1,  0};
+        {0,  0, -1} */
     
     /* Private functions */
     virtual void    read_register(uint16_t addr, uint8_t numBytes, uint8_t *data){};

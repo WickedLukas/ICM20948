@@ -235,11 +235,54 @@ bool ICM20948::read_temperature(int16_t &temperature) {
     return true;
 }
 
+/** Read sensors in units
+ *
+ * @param[out] accel_x_g Accelerometer measurement on X axis in g
+ * @param[out] accel_y_g Accelerometer measurement on Y axis in g
+ * @param[out] accel_z_g Accelerometer measurement on Z axis in g
+ * @param[out] gyro_x_dps Gyroscope measurement on X axis in deg/s
+ * @param[out] gyro_y_dps Gyroscope measurement on Y axis in deg/s
+ * @param[out] gyro_z_dps Gyroscope measurement on Z axis in deg/s
+ * @param[out] temperature_c Temperature measurement in Celsius
+ * @param[out] mag_x_ut Magnetometer measurement on X axis in uT
+ * @param[out] mag_y_ut Magnetometer measurement on Y axis in uT
+ * @param[out] mag_z_ut Magnetometer measurement on Z axis in uT
+ *
+ * @return
+ *   'true' if successful,
+ *   'false' on error.
+ */
+bool ICM20948::read_sensors_units(float &accel_x_g, float &accel_y_g, float &accel_z_g, float &gyro_x_dps, float &gyro_y_dps, float &gyro_z_dps, float &temperature_c, float &mag_x_ut, float &mag_y_ut, float &mag_z_ut) {
+    static int16_t accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z, temperature, mag_x, mag_y, mag_z;
+    
+    read_sensors(accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z, temperature, mag_x, mag_y, mag_z);
+
+    /* Multiply the accelerometer raw measurements with their resolution to transform them into g */
+    accel_x_g = (float) accel_x * m_accelRes;
+    accel_y_g = (float) accel_y * m_accelRes;
+    accel_z_g = (float) accel_z * m_accelRes;
+    
+    /* Multiply the gyroscope raw measurements with their resolution to transform them into deg/s */
+    gyro_x_dps = (float) gyro_x * m_gyroRes;
+    gyro_y_dps = (float) gyro_y * m_gyroRes;
+    gyro_z_dps = (float) gyro_z * m_gyroRes;
+    
+    /* Transform the temperature raw measurement into Celsius */
+    temperature_c = ( (float) temperature / 333.87f) + 21.0f;
+    
+    /* Multiply the magnetometer raw measurements with their resolution to transform them into uT */
+    mag_x_ut = (float) mag_x * m_magRes;
+    mag_y_ut = (float) mag_y * m_magRes;
+    mag_z_ut = (float) mag_z * m_magRes;
+    
+    return true;
+}
+
 /** Read gyroscope in deg/s
  *
- * @param[out] gyr_x Gyroscope measurement on X axis in deg/s
- * @param[out] gyr_y Gyroscope measurement on Y axis in deg/s
- * @param[out] gyr_z Gyroscope measurement on Z axis in deg/s
+ * @param[out] gyro_x_dps Gyroscope measurement on X axis in deg/s
+ * @param[out] gyro_y_dps Gyroscope measurement on Y axis in deg/s
+ * @param[out] gyro_z_dps Gyroscope measurement on Z axis in deg/s
  *
  * @return
  *   'true' if successful,
@@ -250,7 +293,7 @@ bool ICM20948::read_gyro_dps(float &gyro_x_dps, float &gyro_y_dps, float &gyro_z
     
     read_gyro(gyro_x, gyro_y, gyro_z);
 
-    /* Multiply the raw measurements with the resolution to transform them into dps */
+    /* Multiply the raw measurements with the resolution to transform them into deg/s */
     gyro_x_dps = (float) gyro_x * m_gyroRes;
     gyro_y_dps = (float) gyro_y * m_gyroRes;
     gyro_z_dps = (float) gyro_z * m_gyroRes;
@@ -260,9 +303,9 @@ bool ICM20948::read_gyro_dps(float &gyro_x_dps, float &gyro_y_dps, float &gyro_z
 
 /** Read accelerometer in g
  *
- * @param[out] accel_x Accelerometer measurement on X axis in g
- * @param[out] accel_y Accelerometer measurement on Y axis in g
- * @param[out] accel_z Accelerometer measurement on Z axis in g
+ * @param[out] accel_x_g Accelerometer measurement on X axis in g
+ * @param[out] accel_y_g Accelerometer measurement on Y axis in g
+ * @param[out] accel_z_g Accelerometer measurement on Z axis in g
  *
  * @return
  *   'true' if successful,
@@ -283,8 +326,7 @@ bool ICM20948::read_accel_g(float &accel_x_g, float &accel_y_g, float &accel_z_g
 
 /** Read temperature in Celsius
  *
- * @param [out] temperature_c
- *      Temperature measurement in Celsius
+ * @param [out] temperature_c Temperature measurement in Celsius
  *
  * @return
  *   'true' if successful,
@@ -298,6 +340,29 @@ bool ICM20948::read_temperature_c(float &temperature_c) {
     /* Transform the raw measurement into Celsius */
     temperature_c = ( (float) temperature / 333.87f) + 21.0f;
 
+    return true;
+}
+
+/** Read magnetometer in uT
+ *
+ * @param[out] mag_x_ut Magnetometer measurement on X axis in uT
+ * @param[out] mag_y_ut Magnetometer measurement on Y axis in uT
+ * @param[out] mag_z_ut Magnetometer measurement on Z axis in uT
+ *
+ * @return
+ *   'true' if successful,
+ *   'false' on error.
+ */
+bool ICM20948::read_mag_ut(float &mag_x_ut, float &mag_y_ut, float &mag_z_ut) {
+    static int16_t mag_x, mag_y, mag_z;
+    
+    read_mag(mag_x, mag_y, mag_z);
+    
+    /* Multiply the raw measurements with the resolution to transform them into uT */
+    mag_x_ut = (float) mag_x * m_magRes;
+    mag_y_ut = (float) mag_y * m_magRes;
+    mag_z_ut = (float) mag_z * m_magRes;
+    
     return true;
 }
 
