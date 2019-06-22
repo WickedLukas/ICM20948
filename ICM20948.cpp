@@ -45,7 +45,7 @@ bool ICM20948::init() {
     uint8_t data[1];
     
     /* Reset ICM20948 */
-    reset();
+    //reset();
     
     /* Auto select best available clock source PLL if ready, else use internal oscillator */
     write_register(ICM20948_REG_PWR_MGMT_1, ICM20948_BIT_CLK_PLL);
@@ -99,7 +99,27 @@ bool ICM20948::init() {
         
     /* Enable Raw Data Ready interrupt */
     enable_irq(true, false);
-     
+    
+    /*
+    static int16_t temp;
+    get_x_gyro_offset(temp);
+    Serial.print(temp); Serial.print("\t");
+    get_y_gyro_offset(temp);
+    Serial.print(temp); Serial.print("\t");
+    get_z_gyro_offset(temp);
+    Serial.println(temp);
+    
+    get_x_accel_offset(temp);
+    Serial.print(temp); Serial.print("\t");
+    get_y_accel_offset(temp);
+    Serial.print(temp); Serial.print("\t");
+    get_z_accel_offset(temp);
+    Serial.println(temp);
+    
+    Serial.println();
+    Serial.println();
+    */
+    
     return true;
 }
 
@@ -267,8 +287,7 @@ bool ICM20948::read_mag(int16_t &mag_x, int16_t &mag_y, int16_t &mag_z) {
 
 /** Read temperature value
  *
- * @param[out]
- *    Temperature value
+ * @param[out] temperature Temperature value
  *
  * @return
  *   'true' if successful,
@@ -389,8 +408,7 @@ bool ICM20948::read_mag_ut(float &mag_x_ut, float &mag_y_ut, float &mag_z_ut) {
 
 /** Read temperature in Celsius
  *
- * @param [out]
- *   Temperature value in Celsius
+ * @param [out] temperature_c Temperature value in Celsius
  *
  * @return
  *   'true' if successful,
@@ -882,6 +900,120 @@ uint32_t ICM20948::set_mag_mode(uint8_t magMode){
 
 /***************************************************************************//**
  * @brief
+ *    Set gyroscope x offset
+ *
+ * @param[in] offset
+ *   Gyroscope x offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::set_x_gyro_offset(int16_t offset) {
+    /* Write value to registers */
+    write_register(ICM20948_REG_XG_OFFS_USRH, (uint8_t) (offset >> 8));
+    write_register(ICM20948_REG_XG_OFFS_USRL, (uint8_t) (offset & 0xFF));
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Set gyroscope y offset
+ *
+ * @param[in] offset
+ *   Gyroscope y offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::set_y_gyro_offset(int16_t offset) {
+    /* Write value to registers */
+    write_register(ICM20948_REG_YG_OFFS_USRH, (uint8_t) (offset >> 8));
+    write_register(ICM20948_REG_YG_OFFS_USRL, (uint8_t) (offset & 0xFF));
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Set gyroscope z offset
+ *
+ * @param[in] offset
+ *   Gyroscope z offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::set_z_gyro_offset(int16_t offset) {
+    /* Write value to registers */
+    write_register(ICM20948_REG_ZG_OFFS_USRH, (uint8_t) (offset >> 8));
+    write_register(ICM20948_REG_ZG_OFFS_USRL, (uint8_t) (offset & 0xFF));
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Set accelerometer x offset
+ *
+ * @param[in] offset
+ *   Accelerometer x offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::set_x_accel_offset(int16_t offset) {
+    /* Write value to registers */
+    write_register(ICM20948_REG_XA_OFFSET_H, (uint8_t) (offset >> 8));
+    write_register(ICM20948_REG_XA_OFFSET_L, (uint8_t) (offset & 0xFF));
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Set accelerometer y offset
+ *
+ * @param[in] offset
+ *   Accelerometer y offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::set_y_accel_offset(int16_t offset) {
+    /* Write value to registers */
+    write_register(ICM20948_REG_YA_OFFSET_H, (uint8_t) (offset >> 8));
+    write_register(ICM20948_REG_YA_OFFSET_L, (uint8_t) (offset & 0xFF));
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Set accelerometer z offset
+ *
+ * @param[in] offset
+ *   Accelerometer z offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::set_z_accel_offset(int16_t offset) {
+    /* Write value to registers */
+    write_register(ICM20948_REG_ZA_OFFSET_H, (uint8_t) (offset >> 8));
+    write_register(ICM20948_REG_ZA_OFFSET_L, (uint8_t) (offset & 0xFF));
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
  *    Get gyroscope resolution
  *
  * @param[out] gyroRes
@@ -955,6 +1087,144 @@ uint32_t ICM20948::get_accel_resolution(float *accelRes) {
             return ERROR;
     }
 
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Get gyroscope x offset
+ *
+ * @param[out] offset
+ *   Gyroscope x offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::get_x_gyro_offset(int16_t &offset) {
+    static uint8_t data[2];
+    
+    /* Read six raw data registers into a data array */
+    read_register(ICM20948_REG_XG_OFFS_USRH, 2, data);
+        
+    /* Convert the MSB and LSB into a signed 16-bit value */
+    offset = ((int16_t) data[0] << 8) | data[1];
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Get gyroscope y offset
+ *
+ * @param[out] offset
+ *   Gyroscope y offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::get_y_gyro_offset(int16_t &offset) {
+    static uint8_t data[2];
+    
+    /* Read six raw data registers into a data array */
+    read_register(ICM20948_REG_YG_OFFS_USRH, 2, data);
+    
+    /* Convert the MSB and LSB into a signed 16-bit value */
+    offset = ((int16_t) data[0] << 8) | data[1];
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Get gyroscope z offset
+ *
+ * @param[out] offset
+ *   Gyroscope z offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::get_z_gyro_offset(int16_t &offset) {
+    static uint8_t data[2];
+    
+    /* Read six raw data registers into a data array */
+    read_register(ICM20948_REG_ZG_OFFS_USRH, 2, data);
+    
+    /* Convert the MSB and LSB into a signed 16-bit value */
+    offset = ((int16_t) data[0] << 8) | data[1];
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Get accelerometer x offset
+ *
+ * @param[out] offset
+ *   Accelerometer x offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::get_x_accel_offset(int16_t &offset) {
+    static uint8_t data[2];
+    
+    /* Read six raw data registers into a data array */
+    read_register(ICM20948_REG_XA_OFFSET_H, 2, data);
+    
+    /* Convert the MSB and LSB into a signed 16-bit value */
+    offset = ((int16_t) data[0] << 8) | data[1];
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Get accelerometer y offset
+ *
+ * @param[out] offset
+ *   Accelerometer y offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::get_y_accel_offset(int16_t &offset) {
+    static uint8_t data[2];
+    
+    /* Read six raw data registers into a data array */
+    read_register(ICM20948_REG_YA_OFFSET_H, 2, data);
+    
+    /* Convert the MSB and LSB into a signed 16-bit value */
+    offset = ((int16_t) data[0] << 8) | data[1];
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Get accelerometer z offset
+ *
+ * @param[out] offset
+ *   Accelerometer z offset
+ *
+ * @return
+ *   'OK' if successful,
+ *   'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::get_z_accel_offset(int16_t &offset) {
+    static uint8_t data[2];
+    
+    /* Read six raw data registers into a data array */
+    read_register(ICM20948_REG_ZA_OFFSET_H, 2, data);
+    
+    /* Convert the MSB and LSB into a signed 16-bit value */
+    offset = ((int16_t) data[0] << 8) | data[1];
+    
     return OK;
 }
 

@@ -390,8 +390,7 @@ public:
 
     /** Read temperature value
      *
-     * @param[out]
-     *   Temperature value
+     * @param[out] temperature Temperature value
      *
      * @return
      *   'true' if successful,
@@ -452,15 +451,14 @@ public:
     
     /** Read temperature in Celsius
      *
-     * @param [out]
-     *   Temperature value in Celsius
+     * @param [out] temperature_c Temperature value in Celsius
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
     bool read_temperature_c(float &temperature_c);
-
+    
 private:
     /* Private variables */
     float           m_gyroRes;
@@ -490,8 +488,20 @@ private:
     uint32_t        set_gyro_fullscale(uint8_t gyroFs);
     uint32_t        set_accel_fullscale(uint8_t accelFs);
     uint32_t        set_mag_mode(uint8_t magMode);
+    uint32_t        set_x_gyro_offset(int16_t offset);
+    uint32_t        set_y_gyro_offset(int16_t offset);
+    uint32_t        set_z_gyro_offset(int16_t offset);
+    uint32_t        set_x_accel_offset(int16_t offset);
+    uint32_t        set_y_accel_offset(int16_t offset);
+    uint32_t        set_z_accel_offset(int16_t offset);
     uint32_t        get_gyro_resolution(float *gyroRes);
     uint32_t        get_accel_resolution(float *accelRes);
+    uint32_t        get_x_gyro_offset(int16_t &offset);
+    uint32_t        get_y_gyro_offset(int16_t &offset);
+    uint32_t        get_z_gyro_offset(int16_t &offset);
+    uint32_t        get_x_accel_offset(int16_t &offset);
+    uint32_t        get_y_accel_offset(int16_t &offset);
+    uint32_t        get_z_accel_offset(int16_t &offset);
     uint32_t        enable_sleepmode(bool enable);
     uint32_t        enable_cyclemode(bool enable);
     uint32_t        enable_sensor(bool accel, bool gyro, bool temp);
