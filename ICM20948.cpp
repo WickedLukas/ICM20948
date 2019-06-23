@@ -23,6 +23,24 @@
 
 #include "ICM20948.h"
 
+// NOTE! Enabling DEBUG adds about 3.3kB to the flash program size.
+// Debug output is now working even on ATMega328P MCUs (e.g. Arduino Uno)
+// after moving string constants to flash memory storage using the F()
+// compiler macro (Arduino IDE 1.0+ required).
+#define DEBUG
+
+#ifdef DEBUG
+#define DEBUG_PRINT(x) Serial.print(x)
+#define DEBUG_PRINTLN(x) Serial.println(x)
+#define DEBUG_PRINT2(x,y) Serial.print(x,y)
+#define DEBUG_PRINTLN2(x,y) Serial.println(x,y)
+#else
+#define DEBUG_PRINT(x)
+#define DEBUG_PRINTLN(x)
+#define DEBUG_PRINT2(x,y)
+#define DEBUG_PRINTLN2(x,y)
+#endif
+
 /** 
  * ICM20948 constructor
  */
@@ -422,6 +440,122 @@ bool ICM20948::read_temperature_c(float &temperature_c) {
     /* Transform the value into Celsius */
     temperature_c = ( (float) temperature / 333.87f) + 21.0f;
 
+    return true;
+}
+
+/**  Gyroscope and accelerometer calibration function. Get mean gyroscope 
+ *   and accelerometer values, while device is at rest and in level. Those
+ *   are then loaded to into ICM20948 bias registers to remove the static 
+ *   offset error.
+ *
+ * @param[in] dt_mean_s Time period in seconds for mean value calculation
+ * @param[in] accuracy_gyro Maximum gyroscope mean value deviation from zero after calibration.
+ * @param[in] accuracy_accel Maximum gyroscope mean value deviation from target value after calibration. The accelerometer 
+ *   target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
+ *
+ * @return
+ *   'true' if new data,
+ *   'false' else.
+ */
+bool ICM20948::calibrate_gyro_accel(uint32_t dt_mean_s, int16_t accuracy_gyro, int16_t accuracy_accel) {
+    uint8_t step_counter = 0;
+    int16_t g_lsb;  // acceleration of gravity in LSB
+
+    int16_t mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz;
+    //int16_t step_ax = 0, step_ay = 0, step_az = 0, step_gx = 0, step_gy = 0, step_gz = 0;
+    int16_t offset_ax = 0, offset_ay = 0, offset_az = 0, offset_gx = 0, offset_gy = 0, offset_gz = 0;
+    
+    //float gyro_resolution;
+    float accel_resolution;    
+    
+    //get_gyro_resolution(gyro_resolution);
+    get_accel_resolution(accel_resolution);
+    
+    g_lsb = (int16_t) (1 / accel_resolution + 0.5);
+    
+    while (1) {
+        step_counter++;
+
+        set_x_accel_offset(offset_ax);
+        set_y_accel_offset(offset_ay);
+        set_z_accel_offset(offset_az);
+
+        set_x_gyro_offset(offset_gx);
+        set_y_gyro_offset(offset_gy);
+        set_z_gyro_offset(offset_gz);
+
+        mean_gyro_accel(dt_mean_s, mean_gx, mean_gy, mean_gz, mean_ax, mean_ay, mean_az);
+
+        if ((abs(mean_ax) < accuracy_accel) &&
+        (abs(mean_ay) < accuracy_accel) &&
+        //((abs(mean_az - g_lsb) < accuracy_accel) && (mean_az >= -g_lsb * pow(2, ACCEL_RANGE + 1) - 1)) &&
+        (abs(mean_az - g_lsb) < accuracy_accel) &&
+        (abs(mean_gx) < accuracy_gyro) &&
+        (abs(mean_gy) < accuracy_gyro) &&
+        (abs(mean_gz) < accuracy_gyro)) {
+            break;
+        }
+
+        /*step_ax = mean_ax * (pow(2, ACCEL_RANGE) / 9);
+        step_ay = mean_ay * (pow(2, ACCEL_RANGE) / 9);
+        step_az = mean_az * (pow(2, ACCEL_RANGE) / 9) - g_lsb  * (pow(2, ACCEL_RANGE) / 9);
+
+        step_gx = mean_gx * (pow(2, GYRO_RANGE) / 4);
+        step_gy = mean_gy * (pow(2, GYRO_RANGE) / 4);
+        step_gz = mean_gz * (pow(2, GYRO_RANGE) / 4);
+
+        offset_ax -= step_ax;
+        offset_ay -= step_ay;
+        offset_az -= step_az;
+
+        offset_gx -= step_gx;
+        offset_gy -= step_gy;
+        offset_gz -= step_gz;*/
+        
+        offset_ax -= mean_ax;
+        offset_ay -= mean_ay;
+        offset_az -= mean_az - g_lsb;
+
+        offset_gx -= mean_gx;
+        offset_gy -= mean_gx;
+        offset_gz -= mean_gz;
+    }
+
+    DEBUG_PRINT("Step count:\t");
+    DEBUG_PRINT(step_counter);
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Updated internal sensor offsets:"));
+    DEBUG_PRINT("a/g:\t");
+    DEBUG_PRINT(offset_ax);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_ay);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_az);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_gx);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_gy);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_gz);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Mean measurement error:"));
+    DEBUG_PRINT("a/g:\t");
+    DEBUG_PRINT(mean_ax);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(mean_ay);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(mean_az - g_lsb);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(mean_gx);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(mean_gy);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(mean_gz);
+    DEBUG_PRINTLN();
+    
     return true;
 }
 
@@ -903,11 +1037,11 @@ uint32_t ICM20948::set_mag_mode(uint8_t magMode){
  *    Set gyroscope x offset
  *
  * @param[in] offset
- *   Gyroscope x offset
+ *    Gyroscope x offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::set_x_gyro_offset(int16_t offset) {
     /* Write value to registers */
@@ -922,11 +1056,11 @@ uint32_t ICM20948::set_x_gyro_offset(int16_t offset) {
  *    Set gyroscope y offset
  *
  * @param[in] offset
- *   Gyroscope y offset
+ *    Gyroscope y offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::set_y_gyro_offset(int16_t offset) {
     /* Write value to registers */
@@ -941,11 +1075,11 @@ uint32_t ICM20948::set_y_gyro_offset(int16_t offset) {
  *    Set gyroscope z offset
  *
  * @param[in] offset
- *   Gyroscope z offset
+ *    Gyroscope z offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::set_z_gyro_offset(int16_t offset) {
     /* Write value to registers */
@@ -960,11 +1094,11 @@ uint32_t ICM20948::set_z_gyro_offset(int16_t offset) {
  *    Set accelerometer x offset
  *
  * @param[in] offset
- *   Accelerometer x offset
+ *    Accelerometer x offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::set_x_accel_offset(int16_t offset) {
     /* Write value to registers */
@@ -979,11 +1113,11 @@ uint32_t ICM20948::set_x_accel_offset(int16_t offset) {
  *    Set accelerometer y offset
  *
  * @param[in] offset
- *   Accelerometer y offset
+ *    Accelerometer y offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::set_y_accel_offset(int16_t offset) {
     /* Write value to registers */
@@ -998,11 +1132,11 @@ uint32_t ICM20948::set_y_accel_offset(int16_t offset) {
  *    Set accelerometer z offset
  *
  * @param[in] offset
- *   Accelerometer z offset
+ *    Accelerometer z offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::set_z_accel_offset(int16_t offset) {
     /* Write value to registers */
@@ -1020,10 +1154,10 @@ uint32_t ICM20948::set_z_accel_offset(int16_t offset) {
  *    Resolution in (deg/s)/bit
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
-uint32_t ICM20948::get_gyro_resolution(float *gyroRes) {
+uint32_t ICM20948::get_gyro_resolution(float &gyroRes) {
     uint8_t reg;
 
     /* Read gyroscope full scale setting */
@@ -1033,16 +1167,16 @@ uint32_t ICM20948::get_gyro_resolution(float *gyroRes) {
     /* Calculate gyro resolution */
     switch ( reg ) {
         case ICM20948_GYRO_FULLSCALE_250DPS:
-            *gyroRes = 250.0f / 32768.0f;
+            gyroRes = 250.0f / 32768.0f;
             break;
         case ICM20948_GYRO_FULLSCALE_500DPS:
-            *gyroRes = 500.0f / 32768.0f;
+            gyroRes = 500.0f / 32768.0f;
             break;
         case ICM20948_GYRO_FULLSCALE_1000DPS:
-            *gyroRes = 1000.0f / 32768.0f;
+            gyroRes = 1000.0f / 32768.0f;
             break;
         case ICM20948_GYRO_FULLSCALE_2000DPS:
-            *gyroRes = 2000.0f / 32768.0f;
+            gyroRes = 2000.0f / 32768.0f;
             break;
         default:
             return ERROR;
@@ -1059,10 +1193,10 @@ uint32_t ICM20948::get_gyro_resolution(float *gyroRes) {
  *    Resolution in g/bit
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
-uint32_t ICM20948::get_accel_resolution(float *accelRes) {
+uint32_t ICM20948::get_accel_resolution(float &accelRes) {
     uint8_t reg;
 
     /* Read acceleration full scale setting */
@@ -1072,16 +1206,16 @@ uint32_t ICM20948::get_accel_resolution(float *accelRes) {
     /* Calculate accel resolution */
     switch ( reg ) {
         case ICM20948_ACCEL_FULLSCALE_2G:
-            *accelRes = 2.0f / 32768.0f;
+            accelRes = 2.0f / 32768.0f;
             break;
         case ICM20948_ACCEL_FULLSCALE_4G:
-            *accelRes = 4.0f / 32768.0f;
+            accelRes = 4.0f / 32768.0f;
             break;
         case ICM20948_ACCEL_FULLSCALE_8G:
-            *accelRes = 8.0f / 32768.0f;
+            accelRes = 8.0f / 32768.0f;
             break;
         case ICM20948_ACCEL_FULLSCALE_16G:
-            *accelRes = 16.0f / 32768.0f;
+            accelRes = 16.0f / 32768.0f;
             break;
         default:
             return ERROR;
@@ -1095,11 +1229,11 @@ uint32_t ICM20948::get_accel_resolution(float *accelRes) {
  *    Get gyroscope x offset
  *
  * @param[out] offset
- *   Gyroscope x offset
+ *    Gyroscope x offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::get_x_gyro_offset(int16_t &offset) {
     static uint8_t data[2];
@@ -1118,11 +1252,11 @@ uint32_t ICM20948::get_x_gyro_offset(int16_t &offset) {
  *    Get gyroscope y offset
  *
  * @param[out] offset
- *   Gyroscope y offset
+ *    Gyroscope y offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::get_y_gyro_offset(int16_t &offset) {
     static uint8_t data[2];
@@ -1141,11 +1275,11 @@ uint32_t ICM20948::get_y_gyro_offset(int16_t &offset) {
  *    Get gyroscope z offset
  *
  * @param[out] offset
- *   Gyroscope z offset
+ *    Gyroscope z offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::get_z_gyro_offset(int16_t &offset) {
     static uint8_t data[2];
@@ -1164,11 +1298,11 @@ uint32_t ICM20948::get_z_gyro_offset(int16_t &offset) {
  *    Get accelerometer x offset
  *
  * @param[out] offset
- *   Accelerometer x offset
+ *    Accelerometer x offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::get_x_accel_offset(int16_t &offset) {
     static uint8_t data[2];
@@ -1187,11 +1321,11 @@ uint32_t ICM20948::get_x_accel_offset(int16_t &offset) {
  *    Get accelerometer y offset
  *
  * @param[out] offset
- *   Accelerometer y offset
+ *    Accelerometer y offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::get_y_accel_offset(int16_t &offset) {
     static uint8_t data[2];
@@ -1210,11 +1344,11 @@ uint32_t ICM20948::get_y_accel_offset(int16_t &offset) {
  *    Get accelerometer z offset
  *
  * @param[out] offset
- *   Accelerometer z offset
+ *    Accelerometer z offset
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::get_z_accel_offset(int16_t &offset) {
     static uint8_t data[2];
@@ -1236,8 +1370,8 @@ uint32_t ICM20948::get_z_accel_offset(int16_t &offset) {
  *    If true, sleep mode is enabled. Set to false to disable sleep mode.
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::enable_sleepmode(bool enable) {
     uint8_t reg;
@@ -1266,8 +1400,8 @@ uint32_t ICM20948::enable_sleepmode(bool enable) {
  *    false they will operate in continuous mode.
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::enable_cyclemode(bool enable) {
     uint8_t reg;
@@ -1297,8 +1431,8 @@ uint32_t ICM20948::enable_cyclemode(bool enable) {
  *    If true enables temperature sensor
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::enable_sensor(bool accel, bool gyro, bool temp) {
     uint8_t pwrManagement1;
@@ -1349,8 +1483,8 @@ uint32_t ICM20948::enable_sensor(bool accel, bool gyro, bool temp) {
  *    If true enables temperature sensor in low power mode
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::enable_lowpowermode(bool enAccel, bool enGyro, bool enTemp) {
     uint8_t data;
@@ -1403,8 +1537,8 @@ uint32_t ICM20948::enable_lowpowermode(bool enAccel, bool enGyro, bool enTemp) {
  *    Desired accel sensor sample rate in Hz
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv) {
     if ( enable ) {
@@ -1466,8 +1600,8 @@ uint32_t ICM20948::enable_wake_on_motion(bool enable, uint8_t womThreshold, uint
  *    Measured gyro sensor bias in deg/s
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::calibrate(float *accelBiasScaled, float *gyroBiasScaled) {
     uint8_t data[12];
@@ -1496,8 +1630,8 @@ uint32_t ICM20948::calibrate(float *accelBiasScaled, float *gyroBiasScaled) {
     set_accel_fullscale(ICM20948_ACCEL_FULLSCALE_2G);
 
     /* Retrieve resolution per bit */
-    get_gyro_resolution(&gyroRes);
-    get_accel_resolution(&accelRes);
+    get_gyro_resolution(gyroRes);
+    get_accel_resolution(accelRes);
 
     /* Accel sensor needs max 30ms, gyro max 35ms to fully start */
     /* Experiments show that gyro needs more time to get reliable results */
@@ -1569,7 +1703,7 @@ uint32_t ICM20948::calibrate(float *accelBiasScaled, float *gyroBiasScaled) {
     gyroBias[1] /= packetCount;
     gyroBias[2] /= packetCount;
 
-    /* Acceleormeter: add or remove (depends on chip orientation) 1G (gravity) from Z axis value */
+    /* Accelerometer: add or remove (depends on chip orientation) 1G (gravity) from Z axis value */
     if ( accelBias[2] > 0L ) {
         accelBias[2] -= (int32_t) (1.0f / accelRes);
     } else {
@@ -1673,11 +1807,11 @@ uint32_t ICM20948::calibrate(float *accelBiasScaled, float *gyroBiasScaled) {
  *    the static offset error.
  *
  * @param[out] gyroBiasScaled
- *    Measured gyro sensor bias in deg/s
+ *     Measured gyro sensor bias in deg/s
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::calibrate_gyro(float *gyroBiasScaled) {
     uint8_t data[12];
@@ -1700,7 +1834,7 @@ uint32_t ICM20948::calibrate_gyro(float *gyroBiasScaled) {
     set_gyro_fullscale(ICM20948_GYRO_FULLSCALE_250DPS);
 
     /* Retrieve resolution per bit */
-    get_gyro_resolution(&gyroRes);
+    get_gyro_resolution(gyroRes);
 
     /* Accel sensor needs max 30ms, gyro max 35ms to fully start */
     /* Experiments show that gyro needs more time to get reliable results */
@@ -1814,6 +1948,61 @@ uint32_t ICM20948::calibrate_gyro(float *gyroBiasScaled) {
 
 /***************************************************************************//**
  * @brief
+ *    Calculate mean gyroscope and accelerometer values, 
+ *    which are used for calibration.
+ *
+ * @param[in] dt_mean_s Time period in seconds for mean value calculation
+ *
+ * @param[out] mean_gx Mean gyroscope X axis value
+ * @param[out] mean_gy Mean gyroscope Y axis value
+ * @param[out] mean_gz Mean gyroscope Z axis value
+ * @param[out] mean_ax Mean accelerometer X axis value
+ * @param[out] mean_ay Mean accelerometer Y axis value
+ * @param[out] mean_az Mean accelerometer Z axis value
+ *
+ * @return
+ *    'OK' if successful,
+ *    'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::mean_gyro_accel(uint32_t dt_mean_s, int16_t& mean_ax, int16_t& mean_ay, int16_t& mean_az, int16_t& mean_gx, int16_t& mean_gy, int16_t& mean_gz)  {
+    uint32_t t_start;
+    uint32_t num = 0;
+    int32_t sum_ax = 0, sum_ay = 0, sum_az = 0, sum_gx = 0, sum_gy = 0, sum_gz = 0;
+    
+    t_start = micros();
+    
+    while ((micros() - t_start) < dt_mean_s)  {
+        while (!imuInterrupt) {
+            // wait for next imu interrupt
+        }
+        // reset imu interrupt flag
+        imuInterrupt = false;
+        
+        // read imu measurements
+        read_gyro_accel(gx, gy, gz, ax, ay, az);
+        
+        sum_ax += ax;
+        sum_ay += ay;
+        sum_az += az;
+        sum_gx += gx;
+        sum_gy += gy;
+        sum_gz += gz;
+        
+        ++num;
+    }
+
+    mean_ax = sum_ax / num;
+    mean_ay = sum_ay / num;
+    mean_az = sum_az / num;
+    mean_gx = sum_gx / num;
+    mean_gy = sum_gy / num;
+    mean_gz = sum_gz / num;
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
  *    Enables or disables interrupts
  *
  * @param[in] dataReadyEnable
@@ -1823,8 +2012,8 @@ uint32_t ICM20948::calibrate_gyro(float *gyroBiasScaled) {
  *    If true enables Wake-up On Motion interrupt, otherwise disables.
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::enable_irq(bool dataReadyEnable, bool womEnable) {
     /* Enable one or both of interrupt sources if required */
@@ -1857,17 +2046,17 @@ uint32_t ICM20948::enable_irq(bool dataReadyEnable, bool womEnable) {
  *    INT_STATUS_3
  *
  * @return
- *   'OK' if successful,
- *   'ERROR' on error.
+ *    'OK' if successful,
+ *    'ERROR' on error.
  ******************************************************************************/
-uint32_t ICM20948::read_irqstatus(uint32_t *int_status) {
+uint32_t ICM20948::read_irqstatus(uint32_t &int_status) {
     static uint8_t reg[4];
 
     read_register(ICM20948_REG_INT_STATUS, 4, reg);
-    *int_status = (uint32_t) reg[0];
-    *int_status |= ( ( (uint32_t) reg[1]) << 8);
-    *int_status |= ( ( (uint32_t) reg[2]) << 16);
-    *int_status |= ( ( (uint32_t) reg[3]) << 24);
+    int_status = (uint32_t) reg[0];
+    int_status |= ( ( (uint32_t) reg[1]) << 8);
+    int_status |= ( ( (uint32_t) reg[2]) << 16);
+    int_status |= ( ( (uint32_t) reg[3]) << 24);
 
     return OK;
 }
@@ -1877,8 +2066,8 @@ uint32_t ICM20948::read_irqstatus(uint32_t *int_status) {
  *    Checks if new data is available for read
  *
  * @return
- *   'true' if Raw Data Ready interrupt bit set,
- *   'false' otherwise.
+ *    'true' if Raw Data Ready interrupt bit set,
+ *    'false' otherwise.
  ******************************************************************************/
 bool ICM20948::is_data_ready(void) {
     static uint8_t status;

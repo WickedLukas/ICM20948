@@ -459,6 +459,22 @@ public:
      */
     bool read_temperature_c(float &temperature_c);
     
+    /**  Gyroscope and accelerometer calibration function. Get mean gyroscope 
+     *   and accelerometer values, while device is at rest and in level. Those
+     *   are then loaded to into ICM20948 bias registers to remove the static 
+     *   offset error.
+     *
+     * @param[in] dt_mean_s Time period in seconds for mean value calculation
+     * @param[in] accuracy_gyro Maximum gyroscope mean value deviation from zero after calibration.
+     * @param[in] accuracy_accel Maximum gyroscope mean value deviation from target value after calibration. The accelerometer 
+     *   target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
+     *
+     * @return
+     *   'true' if new data,
+     *   'false' else.
+     */
+    bool calibrate_gyro_accel(uint32_t dt_mean_s, int16_t accuracy_gyro, int16_t accuracy_accel);
+    
 private:
     /* Private variables */
     float           m_gyroRes;
@@ -494,8 +510,8 @@ private:
     uint32_t        set_x_accel_offset(int16_t offset);
     uint32_t        set_y_accel_offset(int16_t offset);
     uint32_t        set_z_accel_offset(int16_t offset);
-    uint32_t        get_gyro_resolution(float *gyroRes);
-    uint32_t        get_accel_resolution(float *accelRes);
+    uint32_t        get_gyro_resolution(float &gyroRes);
+    uint32_t        get_accel_resolution(float &accelRes);
     uint32_t        get_x_gyro_offset(int16_t &offset);
     uint32_t        get_y_gyro_offset(int16_t &offset);
     uint32_t        get_z_gyro_offset(int16_t &offset);
@@ -509,8 +525,9 @@ private:
     uint32_t        enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv);
     uint32_t        calibrate(float *accelBiasScaled, float *gyroBiasScaled);
     uint32_t        calibrate_gyro(float *gyroBiasScaled);
+    uint32_t        mean_gyro_accel(uint32_t dt_mean_s, int16_t& mean_ax, int16_t& mean_ay, int16_t& mean_az, int16_t& mean_gx, int16_t& mean_gy, int16_t& mean_gz);
     uint32_t        enable_irq(bool dataReadyEnable, bool womEnable);
-    uint32_t        read_irqstatus(uint32_t *int_status);
+    uint32_t        read_irqstatus(uint32_t &int_status);
     bool            is_data_ready(void);
 };
 
