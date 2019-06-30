@@ -337,56 +337,56 @@ public:
      */
     bool init();
 
-    /** Read gyroscope and accelerometer values
+    /** Read accelerometer and gyroscope values
      *
-     * @param[out] gyro_x Gyroscope X axis value
-     * @param[out] gyro_y Gyroscope Y axis value
-     * @param[out] gyro_z Gyroscope Z axis value
-     * @param[out] accel_x Accelerometer X axis value
-     * @param[out] accel_y Accelerometer Y axis value
-     * @param[out] accel_z Accelerometer Z axis value
-     *
-     * @return
-     *   'true' if successful,
-     *   'false' on error.
-     */
-    bool read_gyro_accel(int16_t &gyro_x, int16_t &gyro_y, int16_t &gyro_z, int16_t &accel_x, int16_t &accel_y, int16_t &accel_z);
-
-    /** Read gyroscope values
-     *
-     * @param[out] gyro_x Gyroscope X axis value
-     * @param[out] gyro_y Gyroscope Y axis value
-     * @param[out] gyro_z Gyroscope Z axis value
+     * @param[out] ax Accelerometer X axis value
+     * @param[out] ay Accelerometer Y axis value
+     * @param[out] az Accelerometer Z axis value
+     * @param[out] gx Gyroscope X axis value
+     * @param[out] gy Gyroscope Y axis value
+     * @param[out] gz Gyroscope Z axis value
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-    bool read_gyro(int16_t &gyro_x, int16_t &gyro_y, int16_t &gyro_z);
+    bool read_accel_gyro(int16_t &ax, int16_t &ay, int16_t &az, int16_t &gx, int16_t &gy, int16_t &gz);
 
     /** Read accelerometer values
      *
-     * @param[out] accel_x Accelerometer X axis value
-     * @param[out] accel_y Accelerometer Y axis value
-     * @param[out] accel_z Accelerometer Z axis value
+     * @param[out] ax Accelerometer X axis value
+     * @param[out] ay Accelerometer Y axis value
+     * @param[out] az Accelerometer Z axis value
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-    bool read_accel(int16_t &accel_x, int16_t &accel_y, int16_t &accel_z);
+    bool read_accel(int16_t &ax, int16_t &ay, int16_t &az);
+    
+    /** Read gyroscope values
+     *
+     * @param[out] gx Gyroscope X axis value
+     * @param[out] gy Gyroscope Y axis value
+     * @param[out] gz Gyroscope Z axis value
+     *
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
+     */
+    bool read_gyro(int16_t &gx, int16_t &gy, int16_t &gz);
 
     /** Read magnetometer values
      *
-     * @param[out] mag_x Magnetometer X axis value
-     * @param[out] mag_y Magnetometer Y axis value
-     * @param[out] mag_z Magnetometer Z axis value
+     * @param[out] mx Magnetometer X axis value
+     * @param[out] my Magnetometer Y axis value
+     * @param[out] mz Magnetometer Z axis value
      *
      * @return
      *   'true' if new data,
      *   'false' else.
      */
-    bool read_mag(int16_t &mag_x, int16_t &mag_y, int16_t &mag_z);
+    bool read_mag(int16_t &mx, int16_t &my, int16_t &mz);
 
     /** Read temperature value
      *
@@ -398,56 +398,56 @@ public:
      */
     bool read_temperature(int16_t &temperature);
     
-    /** Read gyroscope in deg/s and accelerometer in g
+    /** Read accelerometer in g and gyroscope in deg/s
      *
-     * @param[out] gyro_x_dps Gyroscope X axis value in deg/s
-     * @param[out] gyro_y_dps Gyroscope Y axis value in deg/s
-     * @param[out] gyro_z_dps Gyroscope Z axis value in deg/s
-     * @param[out] accel_x_g Accelerometer X axis value in g
-     * @param[out] accel_y_g Accelerometer Y axis value in g
-     * @param[out] accel_z_g Accelerometer Z axis value in g
-     *
-     * @return
-     *   'true' if successful,
-     *   'false' on error.
-     */
-    bool read_gyro_dps_accel_g(float &gyro_x_dps, float &gyro_y_dps, float &gyro_z_dps, float &accel_x_g, float &accel_y_g, float &accel_z_g);
-
-    /** read gyroscope in deg/s
-     *
-     * @param[out] gyr_x_dps Gyroscope X axis value in deg/s
-     * @param[out] gyr_y_dps Gyroscope Y axis value in deg/s
-     * @param[out] gyr_z_dps Gyroscope Z axis value in deg/s
+     * @param[out] ax_g Accelerometer X axis value in g
+     * @param[out] ay_g Accelerometer Y axis value in g
+     * @param[out] az_g Accelerometer Z axis value in g
+     * @param[out] gx_dps Gyroscope X axis value in deg/s
+     * @param[out] gy_dps Gyroscope Y axis value in deg/s
+     * @param[out] gz_dps Gyroscope Z axis value in deg/s
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-    bool read_gyro_dps(float &gyro_x_dps, float &gyro_y_dps, float &gyro_z_dps);
+    bool read_accel_gyro_g_dps(float &ax_g, float &ay_g, float &az_g, float &gx_dps, float &gy_dps, float &gz_dps);
     
     /** Read accelerometer in g
      *
-     * @param[out] accel_x_g Accelerometer X axis value in g
-     * @param[out] accel_y_g Accelerometer Y axis value in g
-     * @param[out] accel_z_g Accelerometer Z axis value in g
+     * @param[out] ax_g Accelerometer X axis value in g
+     * @param[out] ay_g Accelerometer Y axis value in g
+     * @param[out] az_g Accelerometer Z axis value in g
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-     bool read_accel_g(float &accel_x_g, float &accel_y_g, float &accel_z_g);
+     bool read_accel_g(float &ax_g, float &ay_g, float &az_g);
      
+     /** read gyroscope in deg/s
+     *
+     * @param[out] gx_dps Gyroscope X axis value in deg/s
+     * @param[out] gy_dps Gyroscope Y axis value in deg/s
+     * @param[out] gz_dps Gyroscope Z axis value in deg/s
+     *
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
+     */
+    bool read_gyro_dps(float &gx_dps, float &gy_dps, float &gz_dps);
+    
     /** Read magnetometer in uT
      *
-     * @param[out] mag_x_uT Magnetometer X axis value in uT
-     * @param[out] mag_y_uT Magnetometer Y axis value in uT
-     * @param[out] mag_z_uT Magnetometer Z axis value in uT
+     * @param[out] mx_uT Magnetometer X axis value in uT
+     * @param[out] my_uT Magnetometer Y axis value in uT
+     * @param[out] mz_uT Magnetometer Z axis value in uT
      *
      * @return
      *   'true' if new data,
      *   'false' else.
      */
-    bool read_mag_ut(float &mag_x_uT, float &mag_y_uT, float &mag_z_uT);
+    bool read_mag_ut(float &mx_uT, float &my_uT, float &mz_uT);
     
     /** Read temperature in Celsius
      *
@@ -459,27 +459,30 @@ public:
      */
     bool read_temperature_c(float &temperature_c);
     
-    /**  Gyroscope and accelerometer calibration function. Get mean gyroscope 
-     *   and accelerometer values, while device is at rest and in level. Those
-     *   are then loaded to into ICM20948 bias registers to remove the static 
+    /**  Accelerometer and gyroscope calibration function. Get accelerometer and
+     *   gyroscope mean values, while device is at rest and in level. Those
+     *   are then loaded into ICM20948 bias registers to remove the static 
      *   offset error.
      *
-     * @param[in] dt_mean_s Time period in seconds for mean value calculation
-     * @param[in] accuracy_gyro Maximum gyroscope mean value deviation from zero after calibration.
-     * @param[in] accuracy_accel Maximum gyroscope mean value deviation from target value after calibration. The accelerometer 
+     * @param[in] imuInterrupt imu interrupt flag
+     * @param[in] time_s Time period in seconds for mean value calculation
+     * @param[in] accel_tolerance_16g Maximum accelerometer mean value deviation from target value after calibration at 8g full scale. The accelerometer
      *   target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
+     * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale.
      *
      * @return
      *   'true' if new data,
      *   'false' else.
      */
-    bool calibrate_gyro_accel(uint32_t dt_mean_s, int16_t accuracy_gyro, int16_t accuracy_accel);
+    bool calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int16_t accel_tolerance_16g, int16_t gyro_tolerance_1000dps);
     
 private:
     /* Private variables */
-    float           m_gyroRes;
-    float           m_accelRes;
-    const float     m_magRes = 4912.0f / 32752.0f;    /*    Measurement range of each axis +-4912 uT is saved in 16 bit output +-32752    */
+    float m_accelRes;
+    float m_gyroRes;
+    const float m_magRes = 4912.0f / 32752.0f;    /*    Measurement range of each axis +-4912 uT is saved in 16 bit output +-32752    */
+    
+    int16_t m_g;    /*  Acceleration of gravity in LSB  */
     
     /*  TODO: transform the magnetometer values to match the coordinate system of the IMU???
     {1,  0,  0};
@@ -487,48 +490,40 @@ private:
     {0,  0, -1} */
     
     /* Private functions */
-    virtual void    read_register(uint16_t addr, uint8_t numBytes, uint8_t *data){};
-    virtual void    write_register(uint16_t addr, uint8_t data){};
-    virtual void    select_bank(uint8_t bank){};
+    virtual void read_register(uint16_t addr, uint8_t numBytes, uint8_t *data){};
+    virtual void write_register(uint16_t addr, uint8_t data){};
+    virtual void select_bank(uint8_t bank){};
     
-    void            read_mag_register(uint8_t addr, uint8_t numBytes, uint8_t *data);
-    void            write_mag_register(uint8_t addr, uint8_t data);
-    void            set_mag_transfer(bool read);
+    void read_mag_register(uint8_t addr, uint8_t numBytes, uint8_t *data);
+    void write_mag_register(uint8_t addr, uint8_t data);
+    void set_mag_transfer(bool read);
     
-    uint32_t        reset(void);
-    uint32_t        reset_mag(void);
-    uint32_t        set_gyro_sample_rate_div(uint8_t gyroDiv);
-    uint32_t        set_accel_sample_rate_div(uint16_t accelDiv);
-    uint32_t        set_gyro_bandwidth(uint8_t gyroBw);
-    uint32_t        set_accel_bandwidth(uint8_t accelBw);
-    uint32_t        set_gyro_fullscale(uint8_t gyroFs);
-    uint32_t        set_accel_fullscale(uint8_t accelFs);
-    uint32_t        set_mag_mode(uint8_t magMode);
-    uint32_t        set_x_gyro_offset(int16_t offset);
-    uint32_t        set_y_gyro_offset(int16_t offset);
-    uint32_t        set_z_gyro_offset(int16_t offset);
-    uint32_t        set_x_accel_offset(int16_t offset);
-    uint32_t        set_y_accel_offset(int16_t offset);
-    uint32_t        set_z_accel_offset(int16_t offset);
-    uint32_t        get_gyro_resolution(float &gyroRes);
-    uint32_t        get_accel_resolution(float &accelRes);
-    uint32_t        get_x_gyro_offset(int16_t &offset);
-    uint32_t        get_y_gyro_offset(int16_t &offset);
-    uint32_t        get_z_gyro_offset(int16_t &offset);
-    uint32_t        get_x_accel_offset(int16_t &offset);
-    uint32_t        get_y_accel_offset(int16_t &offset);
-    uint32_t        get_z_accel_offset(int16_t &offset);
-    uint32_t        enable_sleepmode(bool enable);
-    uint32_t        enable_cyclemode(bool enable);
-    uint32_t        enable_sensor(bool accel, bool gyro, bool temp);
-    uint32_t        enable_lowpowermode(bool enAccel, bool enGyro, bool enTemp);
-    uint32_t        enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv);
-    uint32_t        calibrate(float *accelBiasScaled, float *gyroBiasScaled);
-    uint32_t        calibrate_gyro(float *gyroBiasScaled);
-    uint32_t        mean_gyro_accel(uint32_t dt_mean_s, int16_t& mean_ax, int16_t& mean_ay, int16_t& mean_az, int16_t& mean_gx, int16_t& mean_gy, int16_t& mean_gz);
-    uint32_t        enable_irq(bool dataReadyEnable, bool womEnable);
-    uint32_t        read_irqstatus(uint32_t &int_status);
-    bool            is_data_ready(void);
+    uint32_t reset(void);
+    uint32_t reset_mag(void);
+    uint32_t set_accel_sample_rate_div(uint16_t accelDiv);
+    uint32_t set_gyro_sample_rate_div(uint8_t gyroDiv);
+    uint32_t set_accel_bandwidth(uint8_t accelBw);
+    uint32_t set_gyro_bandwidth(uint8_t gyroBw);
+    uint32_t set_accel_fullscale(uint8_t accelFs);
+    uint32_t set_gyro_fullscale(uint8_t gyroFs);
+    uint32_t set_mag_mode(uint8_t magMode);
+    uint32_t set_accel_offsets(int16_t offset_ax, int16_t offset_ay, int16_t offset_az);
+    uint32_t set_gyro_offsets(int16_t offset_gx, int16_t offset_gy, int16_t offset_gz);
+    uint32_t get_accel_resolution(float &accelRes);
+    uint32_t get_gyro_resolution(float &gyroRes);
+    uint32_t get_accel_offsets(int16_t &offset_ax, int16_t &offset_ay, int16_t &offset_az);
+    uint32_t get_gyro_offsets(int16_t &offset_gx, int16_t &offset_gy, int16_t &offset_gz);
+    uint32_t enable_sleepmode(bool enable);
+    uint32_t enable_cyclemode(bool enable);
+    uint32_t enable_sensor(bool accel, bool gyro, bool temp);
+    uint32_t enable_lowpowermode(bool enAccel, bool enGyro, bool enTemp);
+    uint32_t enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv);
+    uint32_t calibrate(float *accelBiasScaled, float *gyroBiasScaled);
+    uint32_t calibrate_gyro(float *gyroBiasScaled);
+    uint32_t mean_accel_gyro(volatile bool &imuInterrupt, float time_s, int16_t &mean_ax, int16_t &mean_ay, int16_t &mean_az, int16_t &mean_gx, int16_t &mean_gy, int16_t &mean_gz);
+    uint32_t enable_irq(bool dataReadyEnable, bool womEnable);
+    uint32_t read_irqstatus(uint32_t &int_status);
+    bool is_data_ready(void);
 };
 
 class ICM20948_SPI : public ICM20948 {
@@ -543,7 +538,7 @@ public:
      * @param[in] data_mode SPI data mode.
      * 
      */
-    ICM20948_SPI(uint8_t cs_pin, SPIClass &port = SPI, uint32_t clock = 7000000, uint8_t bit_order = MSBFIRST, uint8_t data_mode = SPI_MODE3);
+    ICM20948_SPI(uint8_t cs_pin, SPIClass &port = SPI, uint32_t clock = 7e6, uint8_t bit_order = MSBFIRST, uint8_t data_mode = SPI_MODE3);
     
     /**
      * ICM20948_SPI destructor
@@ -552,16 +547,16 @@ public:
 
 private:
     /* SPI variables */
-    const uint8_t   M_CS_PIN;
-    SPIClass        &m_port;
-    const uint32_t  M_CLOCK;
-    const uint8_t   M_BIT_ORDER;
-    const uint8_t   M_DATA_MODE;
+    const uint8_t M_CS_PIN;
+    SPIClass &m_port;
+    const uint32_t M_CLOCK;
+    const uint8_t M_BIT_ORDER;
+    const uint8_t M_DATA_MODE;
     
     /* Private functions */
-    void            read_register(uint16_t addr, uint8_t numBytes, uint8_t *data);
-    void            write_register(uint16_t addr, uint8_t data);
-    void            select_bank(uint8_t bank);
+    void read_register(uint16_t addr, uint8_t numBytes, uint8_t *data);
+    void write_register(uint16_t addr, uint8_t data);
+    void select_bank(uint8_t bank);
 };
 
 #endif
