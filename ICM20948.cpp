@@ -101,7 +101,7 @@ bool ICM20948::init() {
     
     /* Configure accelerometer */
     set_accel_bandwidth(ICM20948_ACCEL_BW_1210HZ);
-    set_accel_fullscale(ICM20948_ACCEL_FULLSCALE_16G);
+    set_accel_fullscale(ICM20948_ACCEL_FULLSCALE_8G);
     //set_accel_sample_rate_div(...);    /* the accelerometer sample rate is 4500 Hz for ICM20948_ACCEL_BW_1210HZ */
     
     /* Configure gyroscope */
@@ -423,67 +423,66 @@ bool ICM20948::read_temperature_c(float &temperature_c) {
     return true;
 }
 
-/**  Accelerometer and gyroscope calibration function. Get accelerometer and
- *   gyroscope mean values, while device is at rest and in level. Those
- *   are then loaded into ICM20948 bias registers to remove the static 
- *   offset error.
+/** Reset accelerometer and gyroscope offsets to factory defaults
+ *
+ * @return
+ *   'true' if successful,
+ *   'false' on error.
+ */
+bool ICM20948::reset_accel_gyro_offsets(){
+    /* set factory default offsets */
+    set_accel_offsets(32513, 2081, 32679);
+    set_gyro_offsets(0, 0, 0);
+    
+    return true;
+}
+
+/** Accelerometer and gyroscope calibration function. Get accelerometer and
+ *  gyroscope mean values, while device is at rest and in level. Those
+ *  are then loaded into ICM20948 bias registers to remove the static 
+ *  offset error.
  *
  * @param[in] imuInterrupt imu interrupt flag
  * @param[in] time_s Time period in seconds for mean value calculation
- * @param[in] gyro_tolerance_16g Maximum accelerometer mean value deviation from target value after calibration at 16g full scale. The accelerometer
- *   target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
- * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale.
+ * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
+ * target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
+ * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale
  *
  * @return
  *   'true' if new data,
  *   'false' else.
  */
-bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int16_t gyro_tolerance_16g, int16_t gyro_tolerance_1000dps) {
-    /* Scale factor to convert accelerometer values into 16g full scale */
-    float accel_offset_scale = (m_accelRes * 32768.0f) / 16;
+bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps) {
+    /* Scale factor to convert accelerometer values into 32g full scale */
+    float accel_offset_scale = (m_accelRes * 32768.0f) / 32;
     /* Scale factor to convert gyroscope values into 1000dps full scale */
     float gyro_offset_scale = (m_gyroRes * 32768.0f) / 1000;
+    
     /* Accelerometer tolerance in current full scale format */
-    int16_t accel_tolerance = gyro_tolerance_16g / accel_offset_scale + 0.5;
+    int32_t accel_tolerance = accel_tolerance_32g * accel_offset_scale + 0.5;
     /* Gyroscope tolerance in current full scale format */
-    int16_t gyro_tolerance = gyro_tolerance_1000dps / gyro_offset_scale + 0.5;
+    int32_t gyro_tolerance = gyro_tolerance_1000dps * gyro_offset_scale + 0.5;
     
     int16_t mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz;
-    int16_t offset_ax, offset_ay, offset_az, offset_gx, offset_gy, offset_gz;
+    int32_t offset_ax, offset_ay, offset_az, offset_gx, offset_gy, offset_gz;
+    int16_t offset_ax_32g, offset_ay_32g, offset_az_32g, offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps;
     
-    int16_t offset_ax_16g, offset_ay_16g, offset_az_16g, offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps;
+    DEBUG_PRINTLN(F("Calibrating accelerometer and gyroscope offsets. Keep device at rest and in level ..."));
     
-    uint16_t step_counter = 0;
-    
-    get_accel_offsets(offset_ax_16g, offset_ay_16g, offset_az_16g);
+    get_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
     get_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
     
     /* Convert offsets to the current accelerometer and gyroscope full scale settings */
-    offset_ax = offset_ax_16g * accel_offset_scale + 0.5;
-    offset_ay = offset_ay_16g * accel_offset_scale + 0.5;
-    offset_az = offset_az_16g * accel_offset_scale + 0.5;
-    offset_gx = offset_gx_1000dps * gyro_offset_scale + 0.5;
-    offset_gy = offset_gy_1000dps * gyro_offset_scale + 0.5;
-    offset_gz = offset_gz_1000dps * gyro_offset_scale + 0.5;
-    
-    DEBUG_PRINT(offset_ax); DEBUG_PRINT("\t"); DEBUG_PRINT(offset_ay); DEBUG_PRINT("\t"); DEBUG_PRINT(offset_az); DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gx); DEBUG_PRINT("\t"); DEBUG_PRINT(offset_gy); DEBUG_PRINT("\t"); DEBUG_PRINT(offset_gz); DEBUG_PRINT("\t");
-    DEBUG_PRINTLN();
-    
-    DEBUG_PRINTLN(m_g);
-    DEBUG_PRINTLN(accel_offset_scale);
-    DEBUG_PRINTLN(gyro_offset_scale);
-    DEBUG_PRINTLN(accel_tolerance);
-    DEBUG_PRINTLN(gyro_tolerance);
-    
+    offset_ax = offset_ax_32g / accel_offset_scale + 0.5;
+    offset_ay = offset_ay_32g / accel_offset_scale + 0.5;
+    offset_az = offset_az_32g / accel_offset_scale + 0.5;
+    offset_gx = offset_gx_1000dps / gyro_offset_scale + 0.5;
+    offset_gy = offset_gy_1000dps / gyro_offset_scale + 0.5;
+    offset_gz = offset_gz_1000dps / gyro_offset_scale + 0.5;
+      
+    static uint16_t step = 0;
     while (1) {
-        step_counter++;
-
         mean_accel_gyro(imuInterrupt, time_s, mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz);
-        
-        DEBUG_PRINT(mean_ax); DEBUG_PRINT("\t"); DEBUG_PRINT(mean_ay); DEBUG_PRINT("\t"); DEBUG_PRINT(mean_az); DEBUG_PRINT("\t"); DEBUG_PRINT(mean_gx); DEBUG_PRINT("\t"); DEBUG_PRINT(mean_gy); DEBUG_PRINT("\t"); DEBUG_PRINTLN(mean_gz);
-        DEBUG_PRINT(offset_ax); DEBUG_PRINT("\t"); DEBUG_PRINT(offset_ay); DEBUG_PRINT("\t"); DEBUG_PRINT(offset_az); DEBUG_PRINT("\t"); DEBUG_PRINT(offset_gx); DEBUG_PRINT("\t"); DEBUG_PRINT(offset_gy); DEBUG_PRINT("\t"); DEBUG_PRINTLN(offset_gz);
-        DEBUG_PRINTLN();
                 
         if ((abs(mean_ax) < accel_tolerance) &&
         (abs(mean_ay) < accel_tolerance) &&
@@ -501,29 +500,31 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
         offset_gy -= mean_gy;
         offset_gz -= mean_gz;
         
-        /* Before writing the offsets to the registers, they need need to be converted into 16g full scale for the accelerometer and 1000dps full scale for the gyroscope */
-        offset_ax_16g = offset_ax * accel_offset_scale + 0.5;
-        offset_ay_16g = offset_ay * accel_offset_scale + 0.5;
-        offset_az_16g = offset_az * accel_offset_scale + 0.5;
+        /* Before writing the offsets to the registers, they need need to be converted to 32g accelerometer full scale and 1000dps gyroscope full scale */
+        offset_ax_32g = offset_ax * accel_offset_scale + 0.5;
+        offset_ay_32g = offset_ay * accel_offset_scale + 0.5;
+        offset_az_32g = offset_az * accel_offset_scale + 0.5;
         offset_gx_1000dps = offset_gx * gyro_offset_scale + 0.5;
         offset_gy_1000dps = offset_gy * gyro_offset_scale + 0.5;
         offset_gz_1000dps = offset_gz * gyro_offset_scale + 0.5;
         
-        set_accel_offsets(offset_ax_16g, offset_ay_16g, offset_az_16g);
+        set_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
         set_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
+        
+        step++;
     }
     
-    DEBUG_PRINT("Step count:\t");
-    DEBUG_PRINT(step_counter);
+    DEBUG_PRINT(F("Step count:\t"));
+    DEBUG_PRINT(step);
     DEBUG_PRINTLN();
 
     DEBUG_PRINTLN(F("Updated internal sensor offsets:"));
     DEBUG_PRINT("a/g:\t");
-    DEBUG_PRINT(offset_ax_16g);
+    DEBUG_PRINT(offset_ax_32g);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_ay_16g);
+    DEBUG_PRINT(offset_ay_32g);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_az_16g);
+    DEBUG_PRINT(offset_az_32g);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(offset_gx_1000dps);
     DEBUG_PRINT("\t");
@@ -541,6 +542,87 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     DEBUG_PRINT("\t");
     DEBUG_PRINT(mean_az - m_g);
     DEBUG_PRINT("\t");
+    DEBUG_PRINT(mean_gx);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(mean_gy);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(mean_gz);
+    DEBUG_PRINTLN();
+    
+    return true;
+}
+
+/** Gyroscope calibration function. Get gyroscope mean values, while device is at rest. 
+ *  Those are then loaded into ICM20948 bias registers to remove the static offset error.
+ *
+ * @param[in] imuInterrupt imu interrupt flag
+ * @param[in] time_s Time period in seconds for mean value calculation
+ * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero in 1000dps full scale format
+ *
+ * @return
+ *   'true' if new data,
+ *   'false' else.
+ */
+bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps) {
+    /* Scale factor to convert gyroscope values into 1000dps full scale */
+    float gyro_offset_scale = (m_gyroRes * 32768.0f) / 1000;
+    
+    /* Gyroscope tolerance in current full scale format */
+    int32_t gyro_tolerance = gyro_tolerance_1000dps * gyro_offset_scale + 0.5;
+    
+    int16_t mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz;
+    int32_t offset_gx, offset_gy, offset_gz;
+    int16_t offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps;
+    
+    DEBUG_PRINTLN(F("Calibrating gyroscope offsets. Keep device at rest ..."));
+    
+    get_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
+    
+    /* Convert offsets to the current gyroscope full scale setting */
+    offset_gx = offset_gx_1000dps / gyro_offset_scale + 0.5;
+    offset_gy = offset_gy_1000dps / gyro_offset_scale + 0.5;
+    offset_gz = offset_gz_1000dps / gyro_offset_scale + 0.5;
+    
+    static uint16_t step = 0;
+    while (1) {
+        mean_accel_gyro(imuInterrupt, time_s, mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz);
+                
+        if ((abs(mean_gx) < gyro_tolerance) &&
+        (abs(mean_gy) < gyro_tolerance) &&
+        (abs(mean_gz) < gyro_tolerance)) {
+            break;
+        }
+     
+        offset_gx -= mean_gx;
+        offset_gy -= mean_gy;
+        offset_gz -= mean_gz;
+        
+        /* Before writing the offsets to the registers, they need need to be converted to 1000dps gyroscope full scale */
+        offset_gx_1000dps = offset_gx * gyro_offset_scale + 0.5;
+        offset_gy_1000dps = offset_gy * gyro_offset_scale + 0.5;
+        offset_gz_1000dps = offset_gz * gyro_offset_scale + 0.5;
+        
+        set_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
+        
+        step++;
+    }
+    
+    DEBUG_PRINT(F("Step count:\t"));
+    DEBUG_PRINT(step);
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Updated internal sensor offsets:"));
+    DEBUG_PRINT("g:\t");
+    DEBUG_PRINT(offset_gx_1000dps);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_gy_1000dps);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_gz_1000dps);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Mean measurement error:"));
+    DEBUG_PRINT("g:\t");
     DEBUG_PRINT(mean_gx);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(mean_gy);
@@ -1040,15 +1122,26 @@ uint32_t ICM20948::set_mag_mode(uint8_t magMode){
  *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::set_accel_offsets(int16_t offset_ax, int16_t offset_ay, int16_t offset_az) {
+    static uint8_t data[3];
+    
+    /* Bit 0 of the LSB offset register must be preserved, since it is used for temperature compensation calculations (? the data sheet is not clear). */
+    
+    /* Read x LSB offset register into a data array */
+    read_register(ICM20948_REG_XA_OFFSET_L, 1, &data[0]);
+    /* Read y LSB offset register into a data array */
+    read_register(ICM20948_REG_YA_OFFSET_L, 1, &data[1]);
+    /* Read z LSB offset register into a data array */
+    read_register(ICM20948_REG_ZA_OFFSET_L, 1, &data[2]);
+    
     /* Write x offset to registers */
-    write_register(ICM20948_REG_XA_OFFSET_H, (uint8_t) (offset_ax >> 8));
-    write_register(ICM20948_REG_XA_OFFSET_L, (uint8_t) (offset_ax & 0xFF));
+    write_register(ICM20948_REG_XA_OFFSET_H, (uint8_t) ((offset_ax >> 7) & 0xFF));
+    write_register(ICM20948_REG_XA_OFFSET_L, (uint8_t) (((offset_ax << 1) & 0xFF) | (data[0] & 0x01)));
     /* Write y offset to registers */
-    write_register(ICM20948_REG_YA_OFFSET_H, (uint8_t) (offset_ay >> 8));
-    write_register(ICM20948_REG_YA_OFFSET_L, (uint8_t) (offset_ay & 0xFF));
+    write_register(ICM20948_REG_YA_OFFSET_H, (uint8_t) ((offset_ay >> 7) & 0xFF));
+    write_register(ICM20948_REG_YA_OFFSET_L, (uint8_t) (((offset_ay << 1) & 0xFF) | (data[1] & 0x01)));
     /* Write z offset to registers */
-    write_register(ICM20948_REG_ZA_OFFSET_H, (uint8_t) (offset_az >> 8));
-    write_register(ICM20948_REG_ZA_OFFSET_L, (uint8_t) (offset_az & 0xFF));
+    write_register(ICM20948_REG_ZA_OFFSET_H, (uint8_t) ((offset_az >> 7) & 0xFF));
+    write_register(ICM20948_REG_ZA_OFFSET_L, (uint8_t) (((offset_az << 1) & 0xFF) | (data[2] & 0x01)));
     
     return OK;
 }
@@ -1172,17 +1265,17 @@ uint32_t ICM20948::get_gyro_resolution(float &gyroRes) {
 uint32_t ICM20948::get_accel_offsets(int16_t &offset_ax, int16_t &offset_ay, int16_t &offset_az) {
     static uint8_t data[6];
     
-    /* Read x raw data registers into a data array */
+    /* Read x offset registers into a data array */
     read_register(ICM20948_REG_XA_OFFSET_H, 2, &data[0]);
-    /* Read y raw data registers into a data array */
+    /* Read y offset registers into a data array */
     read_register(ICM20948_REG_YA_OFFSET_H, 2, &data[2]);
-    /* Read z raw data registers into a data array */
+    /* Read z offset registers into a data array */
     read_register(ICM20948_REG_ZA_OFFSET_H, 2, &data[4]);
     
     /* Convert the MSB and LSB into a signed 16-bit value */
-    offset_ax = ((int16_t) data[0] << 8) | data[1];
-    offset_ay = ((int16_t) data[2] << 8) | data[3];
-    offset_az = ((int16_t) data[4] << 8) | data[5];
+    offset_ax = ((uint16_t) data[0] << 7) | (data[1] >> 1);
+    offset_ay = ((uint16_t) data[2] << 7) | (data[3] >> 1);
+    offset_az = ((uint16_t) data[4] << 7) | (data[5] >> 1);
     
     return OK;
 }
@@ -1210,9 +1303,9 @@ uint32_t ICM20948::get_gyro_offsets(int16_t &offset_gx, int16_t &offset_gy, int1
     read_register(ICM20948_REG_ZG_OFFS_USRH, 2, &data[4]);
         
     /* Convert the MSB and LSB into a signed 16-bit value */
-    offset_gx = ((int16_t) data[0] << 8) | data[1];
-    offset_gy = ((int16_t) data[2] << 8) | data[3];
-    offset_gz = ((int16_t) data[4] << 8) | data[5];
+    offset_gx = ((uint16_t) data[0] << 8) | data[1];
+    offset_gy = ((uint16_t) data[2] << 8) | data[3];
+    offset_gz = ((uint16_t) data[4] << 8) | data[5];
     
     return OK;
 }
@@ -1443,366 +1536,6 @@ uint32_t ICM20948::enable_wake_on_motion(bool enable, uint8_t womThreshold, uint
 
 /***************************************************************************//**
  * @brief
- *    Accelerometer and gyroscope calibration function. Read gyroscope
- *    and accelerometer values while device is at rest and in level. The
- *    resulting values are loaded to accel and gyro bias registers to remove
- *    the static offset error.
- *
- * @param[out] accelBiasScaled
- *    Measured acceleration sensor bias in mg
- *
- * @param[out] gyroBiasScaled
- *    Measured gyro sensor bias in deg/s
- *
- * @return
- *    'OK' if successful,
- *    'ERROR' on error.
- ******************************************************************************/
-uint32_t ICM20948::calibrate(float *accelBiasScaled, float *gyroBiasScaled) {
-    uint8_t data[12];
-    uint16_t i, packetCount, fifoCount;
-    int32_t gyroBias[3] = { 0, 0, 0 };
-    int32_t accelBias[3] = { 0, 0, 0 };
-    int32_t accelTemp[3];
-    int32_t gyroTemp[3];
-    int32_t accelBiasFactory[3];
-    int32_t gyroBiasStored[3];
-    float gyroRes, accelRes;
-
-    /* Enable accelerometer and gyro */
-    enable_sensor(true, true, false);
-
-    /* Set sample rates */
-    set_gyro_sample_rate_div(0);
-    set_accel_sample_rate_div(0);
-
-    /* 246Hz BW for accelerometer and 200Hz for gyroscope */
-    set_gyro_bandwidth(ICM20948_GYRO_BW_12HZ);
-    set_accel_bandwidth(ICM20948_ACCEL_BW_246HZ);
-
-    /* Set most sensitive range: 2G full scale and 250dps full scale */
-    set_gyro_fullscale(ICM20948_GYRO_FULLSCALE_250DPS);
-    set_accel_fullscale(ICM20948_ACCEL_FULLSCALE_2G);
-
-    /* Retrieve resolution per bit */
-    get_gyro_resolution(gyroRes);
-    get_accel_resolution(accelRes);
-
-    /* Accel sensor needs max 30ms, gyro max 35ms to fully start */
-    /* Experiments show that gyro needs more time to get reliable results */
-    delay(50);
-
-    /* Disable FIFO */
-    write_register(ICM20948_REG_USER_CTRL, ICM20948_BIT_FIFO_EN);
-    write_register(ICM20948_REG_FIFO_MODE, 0x0F);
-
-    /* Enable accelerometer and gyro to store data in FIFO */
-    write_register(ICM20948_REG_FIFO_EN_2, ICM20948_BIT_ACCEL_FIFO_EN | ICM20948_BITS_GYRO_FIFO_EN);
-
-    /* Reset FIFO */
-    write_register(ICM20948_REG_FIFO_RST, 0x0F);
-    write_register(ICM20948_REG_FIFO_RST, 0x00);
-
-    /* Enable FIFO */
-    write_register(ICM20948_REG_USER_CTRL, ICM20948_BIT_FIFO_EN);
-
-    /* Max FIFO size is 4096 bytes, one set of measurements takes 12 bytes */
-    /* (3 axes, 2 sensors, 2 bytes each value ) 340 samples use 4080 bytes of FIFO */
-    /* Loop until at least 4080 samples gathered */
-    fifoCount = 0;
-    while ( fifoCount < 4080 ) {
-        delay(5);
-        /* Read FIFO sample count */
-        read_register(ICM20948_REG_FIFO_COUNT_H, 2, data);
-        /* Convert to a 16 bit value */
-        fifoCount = ( (uint16_t) (data[0] << 8) | data[1]);
-    }
-
-    /* Disable accelerometer and gyro to store data in FIFO */
-    write_register(ICM20948_REG_FIFO_EN_2, 0x00);
-
-    /* Read FIFO sample count */
-    read_register(ICM20948_REG_FIFO_COUNT_H, 2, data);
-
-    /* Convert to a 16 bit value */
-    fifoCount = ( (uint16_t) (data[0] << 8) | data[1]);
-
-    /* Calculate number of data sets (3 axis of accel an gyro, two bytes each = 12 bytes) */
-    packetCount = fifoCount / 12;
-
-    /* Retrieve data from FIFO */
-    for ( i = 0; i < packetCount; i++ ) {
-        read_register(ICM20948_REG_FIFO_R_W, 12, data);
-        /* Convert to 16 bit signed accel and gyro x,y and z values */
-        accelTemp[0] = ( (int16_t) (data[0] << 8) | data[1]);
-        accelTemp[1] = ( (int16_t) (data[2] << 8) | data[3]);
-        accelTemp[2] = ( (int16_t) (data[4] << 8) | data[5]);
-        gyroTemp[0] = ( (int16_t) (data[6] << 8) | data[7]);
-        gyroTemp[1] = ( (int16_t) (data[8] << 8) | data[9]);
-        gyroTemp[2] = ( (int16_t) (data[10] << 8) | data[11]);
-
-        /* Sum up values */
-        accelBias[0] += accelTemp[0];
-        accelBias[1] += accelTemp[1];
-        accelBias[2] += accelTemp[2];
-        gyroBias[0] += gyroTemp[0];
-        gyroBias[1] += gyroTemp[1];
-        gyroBias[2] += gyroTemp[2];
-    }
-
-    /* Divide by packet count to get average */
-    accelBias[0] /= packetCount;
-    accelBias[1] /= packetCount;
-    accelBias[2] /= packetCount;
-    gyroBias[0] /= packetCount;
-    gyroBias[1] /= packetCount;
-    gyroBias[2] /= packetCount;
-
-    /* Accelerometer: add or remove (depends on chip orientation) 1G (gravity) from Z axis value */
-    if ( accelBias[2] > 0L ) {
-        accelBias[2] -= (int32_t) (1.0f / accelRes);
-    } else {
-        accelBias[2] += (int32_t) (1.0f / accelRes);
-    }
-
-    /* Convert values to deg/s for displaying */
-    gyroBiasScaled[0] = (float) gyroBias[0] * gyroRes;
-    gyroBiasScaled[1] = (float) gyroBias[1] * gyroRes;
-    gyroBiasScaled[2] = (float) gyroBias[2] * gyroRes;
-
-    /* Read stored gyro trim values. After reset these values are all 0 */
-    read_register(ICM20948_REG_XG_OFFS_USRH, 2, data);
-    gyroBiasStored[0] = ( (int16_t) (data[0] << 8) | data[1]);
-    read_register(ICM20948_REG_YG_OFFS_USRH, 2, data);
-    gyroBiasStored[1] = ( (int16_t) (data[0] << 8) | data[1]);
-    read_register(ICM20948_REG_ZG_OFFS_USRH, 2, data);
-    gyroBiasStored[2] = ( (int16_t) (data[0] << 8) | data[1]);
-
-    /* Gyro bias should be stored in 1000dps full scaled format. We measured in 250dps to get */
-    /* best sensitivity, so need to divide by 4 */
-    /* Subtract from stored calibration value */
-    gyroBiasStored[0] -= gyroBias[0] / 4;
-    gyroBiasStored[1] -= gyroBias[1] / 4;
-    gyroBiasStored[2] -= gyroBias[2] / 4;
-
-    /* Split values into two bytes */
-    data[0] = (gyroBiasStored[0] >> 8) & 0xFF;
-    data[1] = (gyroBiasStored[0]) & 0xFF;
-    data[2] = (gyroBiasStored[1] >> 8) & 0xFF;
-    data[3] = (gyroBiasStored[1]) & 0xFF;
-    data[4] = (gyroBiasStored[2] >> 8) & 0xFF;
-    data[5] = (gyroBiasStored[2]) & 0xFF;
-
-    /* Write gyro bias values to chip */
-    write_register(ICM20948_REG_XG_OFFS_USRH, data[0]);
-    write_register(ICM20948_REG_XG_OFFS_USRL, data[1]);
-    write_register(ICM20948_REG_YG_OFFS_USRH, data[2]);
-    write_register(ICM20948_REG_YG_OFFS_USRL, data[3]);
-    write_register(ICM20948_REG_ZG_OFFS_USRH, data[4]);
-    write_register(ICM20948_REG_ZG_OFFS_USRL, data[5]);
-
-    /* Calculate accelerometer bias values to store in hardware accelerometer bias registers. These registers contain */
-    /* factory trim values which must be added to the calculated accelerometer biases; on boot up these registers will hold */
-    /* non-zero values. In addition, bit 0 of the lower byte must be preserved since it is used for temperature */
-    /* compensation calculations(? the data sheet is not clear). Accelerometer bias registers expect bias input */
-    /* as 2048 LSB per g, so that accelerometer biases calculated above must be divided by 8. */
-
-    /* Read factory accelerometer trim values */
-    read_register(ICM20948_REG_XA_OFFSET_H, 2, data);
-    accelBiasFactory[0] = ( (int16_t) (data[0] << 8) | data[1]);
-    read_register(ICM20948_REG_YA_OFFSET_H, 2, data);
-    accelBiasFactory[1] = ( (int16_t) (data[0] << 8) | data[1]);
-    read_register(ICM20948_REG_ZA_OFFSET_H, 2, data);
-    accelBiasFactory[2] = ( (int16_t) (data[0] << 8) | data[1]);
-
-    /* Construct total accelerometer bias, including calculated average accelerometer bias from above */
-    /* Scale 2g full scale (most sensitive range) results to 16g full scale - divide by 8 */
-    /* Clear last bit (temperature compensation? - the data sheet is not clear) */
-    /* Subtract from factory calibration value */
-
-    accelBiasFactory[0] -= ( (accelBias[0] / 8) & ~1);
-    accelBiasFactory[1] -= ( (accelBias[1] / 8) & ~1);
-    accelBiasFactory[2] -= ( (accelBias[2] / 8) & ~1);
-
-    /* Split values into two bytes */
-    data[0] = (accelBiasFactory[0] >> 8) & 0xFF;
-    data[1] = (accelBiasFactory[0]) & 0xFF;
-    data[2] = (accelBiasFactory[1] >> 8) & 0xFF;
-    data[3] = (accelBiasFactory[1]) & 0xFF;
-    data[4] = (accelBiasFactory[2] >> 8) & 0xFF;
-    data[5] = (accelBiasFactory[2]) & 0xFF;
-
-    /* Store them in accelerometer offset registers */
-    write_register(ICM20948_REG_XA_OFFSET_H, data[0]);
-    write_register(ICM20948_REG_XA_OFFSET_L, data[1]);
-    write_register(ICM20948_REG_YA_OFFSET_H, data[2]);
-    write_register(ICM20948_REG_YA_OFFSET_L, data[3]);
-    write_register(ICM20948_REG_ZA_OFFSET_H, data[4]);
-    write_register(ICM20948_REG_ZA_OFFSET_L, data[5]);
-
-    /* Convert values to G for displaying */
-    accelBiasScaled[0] = (float) accelBias[0] * accelRes;
-    accelBiasScaled[1] = (float) accelBias[1] * accelRes;
-    accelBiasScaled[2] = (float) accelBias[2] * accelRes;
-
-    /* Turn off FIFO */
-    write_register(ICM20948_REG_USER_CTRL, 0x00);
-
-    /* Disable all sensors */
-    enable_sensor(false, false, false);
-
-    return OK;
-}
-
-/***************************************************************************//**
- * @brief
- *    Gyroscope calibration function. Read gyroscope
- *    values while device is at rest and in level. The
- *    resulting values are loaded to the gyro bias registers to remove
- *    the static offset error.
- *
- * @param[out] gyroBiasScaled
- *     Measured gyro sensor bias in deg/s
- *
- * @return
- *    'OK' if successful,
- *    'ERROR' on error.
- ******************************************************************************/
-uint32_t ICM20948::calibrate_gyro(float *gyroBiasScaled) {
-    uint8_t data[12];
-    uint16_t i, packetCount, fifoCount;
-    int32_t gyroBias[3] = { 0, 0, 0 };
-    int32_t gyroTemp[3];
-    int32_t gyroBiasStored[3];
-    float gyroRes;
-
-    /* Enable accelerometer and gyro */
-    enable_sensor(true, true, false);
-
-    /* Set gyro sample rate */
-    set_gyro_sample_rate_div(0);
-
-    /* Configure bandwidth for gyroscope to 12Hz */
-    set_gyro_bandwidth(ICM20948_GYRO_BW_12HZ);
-
-    /* Configure sensitivity to 250dps full scale */
-    set_gyro_fullscale(ICM20948_GYRO_FULLSCALE_250DPS);
-
-    /* Retrieve resolution per bit */
-    get_gyro_resolution(gyroRes);
-
-    /* Accel sensor needs max 30ms, gyro max 35ms to fully start */
-    /* Experiments show that gyro needs more time to get reliable results */
-    delay(50);
-
-    /* Disable FIFO */
-    write_register(ICM20948_REG_USER_CTRL, ICM20948_BIT_FIFO_EN);
-    write_register(ICM20948_REG_FIFO_MODE, 0x0F);
-
-    /* Enable accelerometer and gyro to store data in FIFO */
-    write_register(ICM20948_REG_FIFO_EN_2, ICM20948_BITS_GYRO_FIFO_EN);
-
-    /* Reset FIFO */
-    write_register(ICM20948_REG_FIFO_RST, 0x0F);
-    write_register(ICM20948_REG_FIFO_RST, 0x00);
-
-    /* Enable FIFO */
-    write_register(ICM20948_REG_USER_CTRL, ICM20948_BIT_FIFO_EN);
-
-    /* Max FIFO size is 4096 bytes, one set of measurements takes 12 bytes */
-    /* (3 axes, 2 sensors, 2 bytes each value ) 340 samples use 4080 bytes of FIFO */
-    /* Loop until at least 4080 samples gathered */
-    fifoCount = 0;
-    while ( fifoCount < 4080 ) {
-        delay(5);
-
-        /* Read FIFO sample count */
-        read_register(ICM20948_REG_FIFO_COUNT_H, 2, data);
-
-        /* Convert to a 16 bit value */
-        fifoCount = ( (uint16_t) (data[0] << 8) | data[1]);
-    }
-
-    /* Disable accelerometer and gyro to store data in FIFO */
-    write_register(ICM20948_REG_FIFO_EN_2, 0x00);
-
-    /* Read FIFO sample count */
-    read_register(ICM20948_REG_FIFO_COUNT_H, 2, data);
-
-    /* Convert to a 16 bit value */
-    fifoCount = ( (uint16_t) (data[0] << 8) | data[1]);
-
-    /* Calculate number of data sets (3 axis of accel an gyro, two bytes each = 12 bytes) */
-    packetCount = fifoCount / 12;
-
-    /* Retrieve data from FIFO */
-    for ( i = 0; i < packetCount; i++ ) {
-        read_register(ICM20948_REG_FIFO_R_W, 12, data);
-        /* Convert to 16 bit signed accel and gyro x,y and z values */
-        gyroTemp[0] = ( (int16_t) (data[6] << 8) | data[7]);
-        gyroTemp[1] = ( (int16_t) (data[8] << 8) | data[9]);
-        gyroTemp[2] = ( (int16_t) (data[10] << 8) | data[11]);
-
-        /* Sum up values */
-        gyroBias[0] += gyroTemp[0];
-        gyroBias[1] += gyroTemp[1];
-        gyroBias[2] += gyroTemp[2];
-    }
-
-    /* Divide by packet count to get average */
-    gyroBias[0] /= packetCount;
-    gyroBias[1] /= packetCount;
-    gyroBias[2] /= packetCount;
-
-    /* Convert values to deg/s for displaying */
-    gyroBiasScaled[0] = (float) gyroBias[0] * gyroRes;
-    gyroBiasScaled[1] = (float) gyroBias[1] * gyroRes;
-    gyroBiasScaled[2] = (float) gyroBias[2] * gyroRes;
-
-    /* Read stored gyro trim values. After reset these values are all 0 */
-    read_register(ICM20948_REG_XG_OFFS_USRH, 2, data);
-    gyroBiasStored[0] = ( (int16_t) (data[0] << 8) | data[1]);
-
-    read_register(ICM20948_REG_YG_OFFS_USRH, 2, data);
-    gyroBiasStored[1] = ( (int16_t) (data[0] << 8) | data[1]);
-
-    read_register(ICM20948_REG_ZG_OFFS_USRH, 2, data);
-    gyroBiasStored[2] = ( (int16_t) (data[0] << 8) | data[1]);
-
-    /* Gyro bias should be stored in 1000dps full scaled format. We measured in 250dps to get */
-    /* best sensitivity, so need to divide by 4 */
-    /* Subtract from stored calibration value */
-    gyroBiasStored[0] -= gyroBias[0] / 4;
-    gyroBiasStored[1] -= gyroBias[1] / 4;
-    gyroBiasStored[2] -= gyroBias[2] / 4;
-
-    /* Split values into two bytes */
-    data[0] = (gyroBiasStored[0] >> 8) & 0xFF;
-    data[1] = (gyroBiasStored[0]) & 0xFF;
-    data[2] = (gyroBiasStored[1] >> 8) & 0xFF;
-    data[3] = (gyroBiasStored[1]) & 0xFF;
-    data[4] = (gyroBiasStored[2] >> 8) & 0xFF;
-    data[5] = (gyroBiasStored[2]) & 0xFF;
-
-    /* Write gyro bias values to chip */
-    write_register(ICM20948_REG_XG_OFFS_USRH, data[0]);
-    write_register(ICM20948_REG_XG_OFFS_USRL, data[1]);
-    write_register(ICM20948_REG_YG_OFFS_USRH, data[2]);
-    write_register(ICM20948_REG_YG_OFFS_USRL, data[3]);
-    write_register(ICM20948_REG_ZG_OFFS_USRH, data[4]);
-    write_register(ICM20948_REG_ZG_OFFS_USRL, data[5]);
-
-    /* Turn off FIFO */
-    write_register(ICM20948_REG_USER_CTRL, 0x00);
-
-    /* Disable all sensors */
-    enable_sensor(false, false, false);
-
-    return OK;
-}
-
-/***************************************************************************//**
- * @brief
  *    Calculate mean accelerometer and gyroscope values, 
  *    which are used for calibration.
  *
@@ -1821,22 +1554,21 @@ uint32_t ICM20948::calibrate_gyro(float *gyroBiasScaled) {
  *    'ERROR' on error.
  ******************************************************************************/
 uint32_t ICM20948::mean_accel_gyro(volatile bool &imuInterrupt, float time_s, int16_t &mean_ax, int16_t &mean_ay, int16_t &mean_az, int16_t &mean_gx, int16_t &mean_gy, int16_t &mean_gz)  {
-    uint32_t t_start;
-    const uint32_t time = (time_s * 1e6) + 0.5;
-    int32_t num = 0;
     int16_t gx, gy, gz, ax, ay, az;
     int32_t sum_ax = 0, sum_ay = 0, sum_az = 0, sum_gx = 0, sum_gy = 0, sum_gz = 0;
     
-    t_start = micros();
+    int32_t num = 0;
+    uint32_t t_start = micros();
+    const uint32_t time = (time_s * 1e6) + 0.5;
     
     while ((micros() - t_start) < time)  {
         while (!imuInterrupt) {
-            // wait for next imu interrupt
+            /* wait for next imu interrupt */
         }
-        // reset imu interrupt flag
+        /* reset imu interrupt flag */
         imuInterrupt = false;
         
-        // read imu measurements
+        /* read imu measurements */
         read_accel_gyro(ax, ay, az, gx, gy, gz);
         
         sum_ax += ax;

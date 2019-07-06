@@ -459,22 +459,43 @@ public:
      */
     bool read_temperature_c(float &temperature_c);
     
-    /**  Accelerometer and gyroscope calibration function. Get accelerometer and
-     *   gyroscope mean values, while device is at rest and in level. Those
-     *   are then loaded into ICM20948 bias registers to remove the static 
-     *   offset error.
+    /** Reset accelerometer and gyroscope offsets to factory defaults
+     *
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
+     */
+    bool reset_accel_gyro_offsets();
+    
+    /** Accelerometer and gyroscope calibration function. Get accelerometer and
+     *  gyroscope mean values, while device is at rest and in level. Those
+     *  are then loaded into ICM20948 bias registers to remove the static 
+     *  offset error.
      *
      * @param[in] imuInterrupt imu interrupt flag
      * @param[in] time_s Time period in seconds for mean value calculation
-     * @param[in] accel_tolerance_16g Maximum accelerometer mean value deviation from target value after calibration at 8g full scale. The accelerometer
-     *   target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
-     * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale.
+     * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
+     * target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
+     * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale
      *
      * @return
      *   'true' if new data,
      *   'false' else.
      */
-    bool calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int16_t accel_tolerance_16g, int16_t gyro_tolerance_1000dps);
+    bool calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps);
+    
+    /** Gyroscope calibration function. Get gyroscope mean values, while device is at rest. 
+     *  Those are then loaded into ICM20948 bias registers to remove the static offset error.
+     *
+     * @param[in] imuInterrupt imu interrupt flag
+     * @param[in] time_s Time period in seconds for mean value calculation
+     * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero in 1000dps full scale format
+     *
+     * @return
+     *   'true' if new data,
+     *   'false' else.
+     */
+    bool calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps);
     
 private:
     /* Private variables */
@@ -518,8 +539,6 @@ private:
     uint32_t enable_sensor(bool accel, bool gyro, bool temp);
     uint32_t enable_lowpowermode(bool enAccel, bool enGyro, bool enTemp);
     uint32_t enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv);
-    uint32_t calibrate(float *accelBiasScaled, float *gyroBiasScaled);
-    uint32_t calibrate_gyro(float *gyroBiasScaled);
     uint32_t mean_accel_gyro(volatile bool &imuInterrupt, float time_s, int16_t &mean_ax, int16_t &mean_ay, int16_t &mean_az, int16_t &mean_gx, int16_t &mean_gy, int16_t &mean_gz);
     uint32_t enable_irq(bool dataReadyEnable, bool womEnable);
     uint32_t read_irqstatus(uint32_t &int_status);
