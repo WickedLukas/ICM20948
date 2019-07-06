@@ -111,6 +111,13 @@ bool ICM20948::init() {
     
     /* Configure magnetometer */
     set_mag_mode(AK09916_MODE_100HZ);
+    
+    /* After performing magnetometer calibration, magnetometer hard iron distortion correction 
+       values can be entered here. Zero means no hard iron correction is performed. */
+    m_center_mx = 0; m_center_my = 0; m_center_mz = 0;
+    /* After performing magnetometer calibration, magnetometer soft iron distortion correction 
+       values can be entered here. One means no soft iron correction is performed. */
+    m_scale_mx = 1; m_scale_my = 1; m_scale_mz = 1;
         
     /* Read the magnetometer ST2 register, because else the data is not updated */
     read_mag_register(AK09916_REG_STATUS_2, 1, data);
@@ -256,6 +263,11 @@ bool ICM20948::read_mag(int16_t &mx, int16_t &my, int16_t &mz) {
                 mx = ((int16_t) data[0] << 8) | data[1];
                 my = ((int16_t) data[2] << 8) | data[3];
                 mz = ((int16_t) data[4] << 8) | data[5];
+                
+                /* Apply hard and soft iron distortion correction */
+                mx = ((mx - m_center_mx) * m_scale_mx) + 0.5;
+                my = ((my - m_center_my) * m_scale_my) + 0.5;
+                mx = ((mz - m_center_mz) * m_scale_mz) + 0.5;
                 
                 status = 4;
                 return true;
@@ -449,8 +461,8 @@ bool ICM20948::reset_accel_gyro_offsets(){
  * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale
  *
  * @return
- *   'true' if new data,
- *   'false' else.
+ *   'true' if successful,
+ *   'false' on error.
  */
 bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps) {
     /* Scale factor to convert accelerometer values into 32g full scale */
@@ -467,7 +479,7 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     int32_t offset_ax, offset_ay, offset_az, offset_gx, offset_gy, offset_gz;
     int16_t offset_ax_32g, offset_ay_32g, offset_az_32g, offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps;
     
-    DEBUG_PRINTLN(F("Calibrating accelerometer and gyroscope offsets. Keep device at rest and in level ..."));
+    DEBUG_PRINTLN(F("Calibrating accelerometer and gyroscope. Keep device at rest and in level ..."));
     
     get_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
     get_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
@@ -560,8 +572,8 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
  * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero in 1000dps full scale format
  *
  * @return
- *   'true' if new data,
- *   'false' else.
+ *   'true' if successful,
+ *   'false' on error.
  */
 bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps) {
     /* Scale factor to convert gyroscope values into 1000dps full scale */
@@ -574,7 +586,7 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     int32_t offset_gx, offset_gy, offset_gz;
     int16_t offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps;
     
-    DEBUG_PRINTLN(F("Calibrating gyroscope offsets. Keep device at rest ..."));
+    DEBUG_PRINTLN(F("Calibrating gyroscope. Keep device at rest ..."));
     
     get_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
     
@@ -633,6 +645,61 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     return true;
 }
 
+/** Magnetometer calibration function. Get magnetometer minimum and maximum values, while moving 
+ *  the device in a figure eight. Those values are then used to cancel out hard and soft iron distortions.
+ *
+ * @param[in] imuInterrupt imu interrupt flag
+ * @param[in] time_s Time period in seconds for minimum and maximum value calculation
+ * @param[in] mag_minimumRange Minimum range (maximum - minimum value) for all directions. 
+ *            If the range is smaller than the minimum range, the time period starts again.
+ *
+ * @return
+ *   'true' if successful,
+ *   'false' on error.
+ */
+bool ICM20948::calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange) {
+    int16_t min_mx, max_mx, min_my, max_my, min_mz, max_mz;
+    float center_mx, center_my, center_mz, center_m;
+    float scale_mx, scale_my, scale_mz;
+    
+    /* Reset hard and soft iron correction before calibration. */
+    m_center_mx = 0; m_center_my = 0; m_center_mz = 0;
+    m_scale_mx = 1; m_scale_my = 1; m_scale_mz = 1;
+    
+    DEBUG_PRINTLN(F("Calibrating magnetometer. Move the device in a figure eight ..."));
+    
+    min_max_mag(imuInterrupt, time_s, mag_minimumRange, min_mx, max_mx, min_my, max_my, min_mz, max_mz);
+    
+    center_mx = (float) (max_mx - min_mx) / 2;
+    center_my = (float) (max_my - min_my) / 2;
+    center_mz = (float) (max_mz - min_mz) / 2;
+    
+    center_m = (center_mx + center_my + center_mz) / 3;
+    
+    scale_mx = center_m / center_mx;
+    scale_my = center_m / center_my;
+    scale_mz = center_m / center_mz;
+    
+    DEBUG_PRINTLN(F("Hard iron correction values (center values):"));
+    DEBUG_PRINT2(center_mx, 1);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT2(center_my, 1);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT2(center_mz, 1);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Soft iron correction values (scale values):"));
+    DEBUG_PRINT2(scale_mx, 4);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT2(scale_my, 4);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT2(scale_mz, 4);
+    DEBUG_PRINTLN();
+    
+    return true;
+}    
+    
 /***************************************************************************//**
  * @brief
  *    Read register in the ICM20948 device
@@ -1553,7 +1620,7 @@ uint32_t ICM20948::enable_wake_on_motion(bool enable, uint8_t womThreshold, uint
  *    'OK' if successful,
  *    'ERROR' on error.
  ******************************************************************************/
-uint32_t ICM20948::mean_accel_gyro(volatile bool &imuInterrupt, float time_s, int16_t &mean_ax, int16_t &mean_ay, int16_t &mean_az, int16_t &mean_gx, int16_t &mean_gy, int16_t &mean_gz)  {
+uint32_t ICM20948::mean_accel_gyro(volatile bool &imuInterrupt, float time_s, int16_t &mean_ax, int16_t &mean_ay, int16_t &mean_az, int16_t &mean_gx, int16_t &mean_gy, int16_t &mean_gz) {
     int16_t gx, gy, gz, ax, ay, az;
     int32_t sum_ax = 0, sum_ay = 0, sum_az = 0, sum_gx = 0, sum_gy = 0, sum_gz = 0;
     
@@ -1561,7 +1628,7 @@ uint32_t ICM20948::mean_accel_gyro(volatile bool &imuInterrupt, float time_s, in
     uint32_t t_start = micros();
     const uint32_t time = (time_s * 1e6) + 0.5;
     
-    while ((micros() - t_start) < time)  {
+    while ((micros() - t_start) < time) {
         while (!imuInterrupt) {
             /* wait for next imu interrupt */
         }
@@ -1587,6 +1654,97 @@ uint32_t ICM20948::mean_accel_gyro(volatile bool &imuInterrupt, float time_s, in
     mean_gx = sum_gx / num;
     mean_gy = sum_gy / num;
     mean_gz = sum_gz / num;
+    
+    return OK;
+}
+
+/***************************************************************************//**
+ * @brief
+ *    Calculate minimum and maximum magnetometer values, 
+ *    which are used for calibration.
+ *
+ * @param[in] imuInterrupt imu interrupt flag
+ * @param[in] time_s Time period in seconds for minimum and maximum value calculation
+ * @param[in] mag_minimumRange Minimum range (maximum - minimum value) for all directions.
+ *            If the range is smaller than the minimum range, the time period starts again.
+ *
+ * @param[out] min_mx Minimum magnetometer X axis value
+ * @param[out] max_mx Maximum magnetometer X axis value
+ * @param[out] min_my Minimum magnetometer Y axis value
+ * @param[out] max_my Maximum magnetometer Y axis value
+ * @param[out] min_mz Minimum magnetometer Z axis value
+ * @param[out] max_mz Maximum magnetometer Z axis value
+ *
+ * @return
+ *    'OK' if successful,
+ *    'ERROR' on error.
+ ******************************************************************************/
+uint32_t ICM20948::min_max_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange, int16_t &min_mx, int16_t &max_mx, int16_t &min_my, int16_t &max_my, int16_t &min_mz, int16_t &max_mz) {
+    int16_t mx, my, mz;
+    
+    min_mx = 32767; min_my = 32767; min_mz = 32767;
+    max_mx = -32768; max_my = -32768; max_mz = -32768;
+    
+    /* flag to indicate new magnetometer data */
+    bool new_mag;
+    
+    const uint32_t time = (time_s * 1e6) + 0.5;
+    
+    /* Flags for axis mag_minimumRange is fulfilled */
+    bool miniumRange_mx = false;
+    bool miniumRange_my = false;
+    bool miniumRange_mz = false;
+    
+    while (!miniumRange_mx || !miniumRange_my || !miniumRange_mz) {
+        uint32_t t_start = micros();
+        while ((micros() - t_start) < time)  {
+            while (!imuInterrupt) {
+                /* wait for next imu interrupt */
+            }
+            /* reset imu interrupt flag */
+            imuInterrupt = false;
+            
+            /* read magnetometer measurement */
+            new_mag = read_mag(mx, my, mz);
+            
+            if (new_mag) {
+                if (mx < min_mx) {
+                    min_mx = mx;
+                }                
+                if (mx > max_mx) {
+                    max_mx = mx;
+                }
+                
+                if (my < min_my) {
+                    min_my = my;
+                }
+                if (my > max_my) {
+                    max_my = my;
+                }
+                
+                if (mz < min_mz) {
+                    min_mz = mz;
+                }
+                if (mz > max_mz) {
+                    max_mz = mz;
+                }
+                
+                if ((max_mx - min_mx) > mag_minimumRange) {
+                    miniumRange_mx = true;
+                }
+                if ((max_my - min_my) > mag_minimumRange) {
+                    miniumRange_my = true;
+                }
+                if ((max_mz - min_mz) > mag_minimumRange) {
+                    miniumRange_mz = true;
+                }
+                
+                DEBUG_PRINT(min_mx); DEBUG_PRINT("\t"); DEBUG_PRINT(min_my); DEBUG_PRINT("\t"); DEBUG_PRINTLN(min_mz);
+                DEBUG_PRINT(max_mx); DEBUG_PRINT("\t"); DEBUG_PRINT(max_my); DEBUG_PRINT("\t"); DEBUG_PRINTLN(max_mz);
+                DEBUG_PRINTLN();
+            }
+        }
+    }
     
     return OK;
 }

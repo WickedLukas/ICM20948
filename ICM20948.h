@@ -475,12 +475,12 @@ public:
      * @param[in] imuInterrupt imu interrupt flag
      * @param[in] time_s Time period in seconds for mean value calculation
      * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
-     * target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
+     *            target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
      * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale
      *
      * @return
-     *   'true' if new data,
-     *   'false' else.
+     *   'true' if successful,
+     *   'false' on error.
      */
     bool calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps);
     
@@ -492,10 +492,24 @@ public:
      * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero in 1000dps full scale format
      *
      * @return
-     *   'true' if new data,
-     *   'false' else.
+     *   'true' if successful,
+     *   'false' on error.
      */
     bool calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps);
+    
+    /** Magnetometer calibration function. Get magnetometer minimum and maximum values, while moving 
+     *  the device in a figure eight. Those values are then used to cancel out hard and soft iron distortions.
+     *
+     * @param[in] imuInterrupt imu interrupt flag
+     * @param[in] time_s Time period in seconds for minimum and maximum value calculation
+     * @param[in] mag_minimumRange Minimum range (maximum - minimum value) for all directions. 
+     *            If the range is smaller than the minimum range, the time period starts again.
+     *
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
+     */
+    bool calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange);
     
 private:
     /* Private variables */
@@ -504,6 +518,15 @@ private:
     const float m_magRes = 4912.0f / 32752.0f;    /*    Measurement range of each axis +-4912 uT is saved in 16 bit output +-32752    */
     
     int16_t m_g;    /*  Acceleration of gravity in LSB  */
+    
+    /* Magnetometer hard iron distortion correction */
+    float m_center_mx = 0;
+    float m_center_my = 0;
+    float m_center_mz = 0;
+    /* Magnetometer soft iron distortion correction */
+    float m_scale_mx = 1;
+    float m_scale_my = 1;
+    float m_scale_mz = 1;
     
     /*  TODO: transform the magnetometer values to match the coordinate system of the IMU???
     {1,  0,  0};
@@ -540,6 +563,7 @@ private:
     uint32_t enable_lowpowermode(bool enAccel, bool enGyro, bool enTemp);
     uint32_t enable_wake_on_motion(bool enable, uint8_t womThreshold, uint16_t accelDiv);
     uint32_t mean_accel_gyro(volatile bool &imuInterrupt, float time_s, int16_t &mean_ax, int16_t &mean_ay, int16_t &mean_az, int16_t &mean_gx, int16_t &mean_gy, int16_t &mean_gz);
+    uint32_t min_max_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange, int16_t &min_mx, int16_t &max_mx, int16_t &min_my, int16_t &max_my, int16_t &min_mz, int16_t &max_mz);
     uint32_t enable_irq(bool dataReadyEnable, bool womEnable);
     uint32_t read_irqstatus(uint32_t &int_status);
     bool is_data_ready(void);
