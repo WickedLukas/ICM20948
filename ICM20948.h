@@ -459,6 +459,33 @@ public:
      */
     bool read_temperature_c(float &temperature_c);
     
+    /** Read accelerometer values and gyroscope in rad/s
+     *
+     * @param[out] ax Accelerometer X axis value
+     * @param[out] ay Accelerometer Y axis value
+     * @param[out] az Accelerometer Z axis value
+     * @param[out] gx_rps Gyroscope X axis value in rad/s
+     * @param[out] gy_rps Gyroscope Y axis value in rad/s
+     * @param[out] gz_rps Gyroscope Z axis value in rad/s
+     *
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
+     */
+    bool read_accel_gyro_rps(int16_t &ax, int16_t &ay, int16_t &az, float &gx_rps, float &gy_rps, float &gz_rps);
+    
+    /** read gyroscope in rad/s
+     *
+     * @param[out] gx_rps Gyroscope X axis value in rad/s
+     * @param[out] gy_rps Gyroscope Y axis value in rad/s
+     * @param[out] gz_rps Gyroscope Z axis value in rad/s
+     *
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
+     */
+    bool read_gyro_rps(float &gx_rps, float &gy_rps, float &gz_rps);
+    
     /** Reset accelerometer and gyroscope offsets to factory defaults
      *
      * @return
@@ -515,18 +542,15 @@ private:
     /* Private variables */
     float m_accelRes;
     float m_gyroRes;
+    float m_gyroRes_rad;
     const float m_magRes = 4912.0f / 32752.0f;    /*    Measurement range of each axis +-4912 uT is saved in 16 bit output +-32752    */
     
     int16_t m_g;    /*  Acceleration of gravity in LSB  */
     
     /* Magnetometer hard iron distortion correction */
-    float m_center_mx = 0;
-    float m_center_my = 0;
-    float m_center_mz = 0;
+    float m_offset_mx = 0, m_offset_my = 0, m_offset_mz = 0;
     /* Magnetometer soft iron distortion correction */
-    float m_scale_mx = 1;
-    float m_scale_my = 1;
-    float m_scale_mz = 1;
+    float m_scale_mx = 1, m_scale_my = 1, m_scale_mz = 1;
     
     /*  TODO: transform the magnetometer values to match the coordinate system of the IMU???
     {1,  0,  0};

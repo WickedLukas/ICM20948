@@ -23,6 +23,9 @@
 
 #include "ICM20948.h"
 
+/* factor for converting a radian number to an equivalent number in degrees */
+const float RAD2DEG = 4068 / 71;
+
 // NOTE! Enabling DEBUG adds about 3.3kB to the flash program size.
 // Debug output is now working even on ATMega328P MCUs (e.g. Arduino Uno)
 // after moving string constants to flash memory storage using the F()
@@ -114,10 +117,10 @@ bool ICM20948::init() {
     
     /* After performing magnetometer calibration, magnetometer hard iron distortion correction 
        values can be entered here. Zero means no hard iron correction is performed. */
-    m_center_mx = 0; m_center_my = 0; m_center_mz = 0;
+    m_offset_mx = 44.5; m_offset_my = 163.0; m_offset_mz = 71.5;
     /* After performing magnetometer calibration, magnetometer soft iron distortion correction 
        values can be entered here. One means no soft iron correction is performed. */
-    m_scale_mx = 1; m_scale_my = 1; m_scale_mz = 1;
+    m_scale_mx = 0.9230; m_scale_my = 1.0607; m_scale_mz = 1.0254;
         
     /* Read the magnetometer ST2 register, because else the data is not updated */
     read_mag_register(AK09916_REG_STATUS_2, 1, data);
@@ -259,15 +262,15 @@ bool ICM20948::read_mag(int16_t &mx, int16_t &my, int16_t &mz) {
                 /* Read AK09916C measurement data from ICM20948 EXT_SLV_SENS_DATA registers */
                 read_register(ICM20948_REG_EXT_SLV_SENS_DATA_00, 6, data);
                 
-                /* Convert the MSB and LSB into a signed 16-bit value */
-                mx = ((int16_t) data[0] << 8) | data[1];
-                my = ((int16_t) data[2] << 8) | data[3];
-                mz = ((int16_t) data[4] << 8) | data[5];
+                /* Convert the LSB and MSB into a signed 16-bit value */
+                mx = ((int16_t) data[1] << 8) | data[0];
+                my = ((int16_t) data[3] << 8) | data[2];
+                mz = ((int16_t) data[5] << 8) | data[4];
                 
                 /* Apply hard and soft iron distortion correction */
-                mx = ((mx - m_center_mx) * m_scale_mx) + 0.5;
-                my = ((my - m_center_my) * m_scale_my) + 0.5;
-                mx = ((mz - m_center_mz) * m_scale_mz) + 0.5;
+                mx = ((mx - m_offset_mx) * m_scale_mx) + 0.5;
+                my = ((my - m_offset_my) * m_scale_my) + 0.5;
+                mz = ((mz - m_offset_mz) * m_scale_mz) + 0.5;
                 
                 status = 4;
                 return true;
@@ -329,7 +332,7 @@ bool ICM20948::read_temperature(int16_t &temperature) {
  *   'false' on error.
  */
 bool ICM20948::read_accel_gyro_g_dps(float &ax_g, float &ay_g, float &az_g, float &gx_dps, float &gy_dps, float &gz_dps) {
-    static int16_t gx, gy, gz, ax, ay, az;
+    static int16_t ax, ay, az, gx, gy, gz;
     
     read_accel_gyro(ax, ay, az, gx, gy, gz);
 
@@ -432,6 +435,55 @@ bool ICM20948::read_temperature_c(float &temperature_c) {
     /* Transform the value into Celsius */
     temperature_c = ( (float) temperature / 333.87f) + 21.0f;
 
+    return true;
+}
+
+/** Read accelerometer values and gyroscope in rad/s
+ *
+ * @param[out] ax Accelerometer X axis value
+ * @param[out] ay Accelerometer Y axis value
+ * @param[out] az Accelerometer Z axis value
+ * @param[out] gx_rps Gyroscope X axis value in rad/s
+ * @param[out] gy_rps Gyroscope Y axis value in rad/s
+ * @param[out] gz_rps Gyroscope Z axis value in rad/s
+ *
+ * @return
+ *   'true' if successful,
+ *   'false' on error.
+ */
+bool ICM20948::read_accel_gyro_rps(int16_t &ax, int16_t &ay, int16_t &az, float &gx_rps, float &gy_rps, float &gz_rps) {
+    static int16_t gx, gy, gz;
+    
+    read_accel_gyro(ax, ay, az, gx, gy, gz);
+    
+    /* Multiply the gyroscope values with their resolution to transform them into rad/s */
+    gx_rps = (float) gx * m_gyroRes_rad;
+    gy_rps = (float) gy * m_gyroRes_rad;
+    gz_rps = (float) gz * m_gyroRes_rad;
+    
+    return true;
+}
+
+/** read gyroscope in rad/s
+ *
+ * @param[out] gx_rps Gyroscope X axis value in rad/s
+ * @param[out] gy_rps Gyroscope Y axis value in rad/s
+ * @param[out] gz_rps Gyroscope Z axis value in rad/s
+ *
+ * @return
+ *   'true' if successful,
+ *   'false' on error.
+ */
+bool ICM20948::read_gyro_rps(float &gx_rps, float &gy_rps, float &gz_rps) {
+    static int16_t gx, gy, gz;
+    
+    read_gyro(gx, gy, gz);
+
+    /* Multiply the values with the radian resolution to transform them into rad/s */
+    gx_rps = (float) gx * m_gyroRes_rad;
+    gy_rps = (float) gy * m_gyroRes_rad;
+    gz_rps = (float) gz * m_gyroRes_rad;
+    
     return true;
 }
 
@@ -659,33 +711,43 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
  */
 bool ICM20948::calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange) {
     int16_t min_mx, max_mx, min_my, max_my, min_mz, max_mz;
-    float center_mx, center_my, center_mz, center_m;
+    int32_t sum_mx, sum_my, sum_mz;
+    int32_t dif_mx, dif_my, dif_mz, dif_m;
+    float offset_mx, offset_my, offset_mz;
     float scale_mx, scale_my, scale_mz;
     
     /* Reset hard and soft iron correction before calibration. */
-    m_center_mx = 0; m_center_my = 0; m_center_mz = 0;
+    m_offset_mx = 0; m_offset_my = 0; m_offset_mz = 0;
     m_scale_mx = 1; m_scale_my = 1; m_scale_mz = 1;
     
     DEBUG_PRINTLN(F("Calibrating magnetometer. Move the device in a figure eight ..."));
     
     min_max_mag(imuInterrupt, time_s, mag_minimumRange, min_mx, max_mx, min_my, max_my, min_mz, max_mz);
     
-    center_mx = (float) (max_mx - min_mx) / 2;
-    center_my = (float) (max_my - min_my) / 2;
-    center_mz = (float) (max_mz - min_mz) / 2;
+    sum_mx = (int32_t) max_mx + min_mx;
+    sum_my = (int32_t) max_my + min_my;
+    sum_mz = (int32_t) max_mz + min_mz;
     
-    center_m = (center_mx + center_my + center_mz) / 3;
+    dif_mx = (int32_t) max_mx - min_mx;
+    dif_my = (int32_t) max_my - min_my;
+    dif_mz = (int32_t) max_mz - min_mz;
     
-    scale_mx = center_m / center_mx;
-    scale_my = center_m / center_my;
-    scale_mz = center_m / center_mz;
+    offset_mx = (float) sum_mx * 0.5;
+    offset_my = (float) sum_my * 0.5;
+    offset_mz = (float) sum_mz * 0.5;
+    
+    dif_m = (dif_mx + dif_my + dif_mz) / 3;
+    
+    scale_mx = (float) dif_m / dif_mx;
+    scale_my = (float) dif_m / dif_my;
+    scale_mz = (float) dif_m / dif_mz;
     
     DEBUG_PRINTLN(F("Hard iron correction values (center values):"));
-    DEBUG_PRINT2(center_mx, 1);
+    DEBUG_PRINT2(offset_mx, 1);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT2(center_my, 1);
+    DEBUG_PRINT2(offset_my, 1);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT2(center_mz, 1);
+    DEBUG_PRINT2(offset_mz, 1);
     DEBUG_PRINT("\t");
     DEBUG_PRINTLN();
 
@@ -1117,15 +1179,19 @@ uint32_t ICM20948::set_gyro_fullscale(uint8_t gyroFs) {
     switch ( gyroFs ) {
         case ICM20948_GYRO_FULLSCALE_250DPS:
             m_gyroRes = 250.0f / 32768.0f;
+            m_gyroRes_rad = m_gyroRes / RAD2DEG;
             break;
         case ICM20948_GYRO_FULLSCALE_500DPS:
             m_gyroRes = 500.0f / 32768.0f;
+            m_gyroRes_rad = m_gyroRes / RAD2DEG;
             break;
         case ICM20948_GYRO_FULLSCALE_1000DPS:
             m_gyroRes = 1000.0f / 32768.0f;
+            m_gyroRes_rad = m_gyroRes / RAD2DEG;
             break;
         case ICM20948_GYRO_FULLSCALE_2000DPS:
             m_gyroRes = 2000.0f / 32768.0f;
+            m_gyroRes_rad = m_gyroRes / RAD2DEG;
             break;
         default:
             return ERROR;
