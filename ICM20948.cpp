@@ -117,10 +117,10 @@ bool ICM20948::init() {
     
     /* After performing magnetometer calibration, magnetometer hard iron distortion correction 
        values can be entered here. Zero means no hard iron correction is performed. */
-    m_offset_mx = 44.5; m_offset_my = 163.0; m_offset_mz = 71.5;
+    m_offset_mx = 347.5; m_offset_my = 157.5; m_offset_mz = 159.5;
     /* After performing magnetometer calibration, magnetometer soft iron distortion correction 
        values can be entered here. One means no soft iron correction is performed. */
-    m_scale_mx = 0.9230; m_scale_my = 1.0607; m_scale_mz = 1.0254;
+    m_scale_mx = 0.9147; m_scale_my = 1.0739; m_scale_mz = 1.0235;
         
     /* Read the magnetometer ST2 register, because else the data is not updated */
     read_mag_register(AK09916_REG_STATUS_2, 1, data);
@@ -267,10 +267,14 @@ bool ICM20948::read_mag(int16_t &mx, int16_t &my, int16_t &mz) {
                 my = ((int16_t) data[3] << 8) | data[2];
                 mz = ((int16_t) data[5] << 8) | data[4];
                 
+                /* Transform magnetometer values to match the coordinate system of accelerometer and gyroscope */
+                my = -my;
+                mz = -mz;                
+                
                 /* Apply hard and soft iron distortion correction */
-                mx = ((mx - m_offset_mx) * m_scale_mx) + 0.5;
-                my = ((my - m_offset_my) * m_scale_my) + 0.5;
-                mz = ((mz - m_offset_mz) * m_scale_mz) + 0.5;
+                mx = ((mx + m_offset_mx) * m_scale_mx) + 0.5;
+                my = ((my + m_offset_my) * m_scale_my) + 0.5;
+                mz = ((mz + m_offset_mz) * m_scale_mz) + 0.5;
                 
                 status = 4;
                 return true;
@@ -732,9 +736,9 @@ bool ICM20948::calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t 
     dif_my = (int32_t) max_my - min_my;
     dif_mz = (int32_t) max_mz - min_mz;
     
-    offset_mx = (float) sum_mx * 0.5;
-    offset_my = (float) sum_my * 0.5;
-    offset_mz = (float) sum_mz * 0.5;
+    offset_mx = -0.5f * sum_mx;
+    offset_my = -0.5f * sum_my;
+    offset_mz = -0.5f * sum_mz;
     
     dif_m = (dif_mx + dif_my + dif_mz) / 3;
     
@@ -1756,7 +1760,7 @@ uint32_t ICM20948::min_max_mag(volatile bool &imuInterrupt, float time_s, int32_
     
     const uint32_t time = (time_s * 1e6) + 0.5;
     
-    /* Flags for axis mag_minimumRange is fulfilled */
+    /* Flags for if axis mag_minimumRange is fulfilled */
     bool miniumRange_mx = false;
     bool miniumRange_my = false;
     bool miniumRange_mz = false;

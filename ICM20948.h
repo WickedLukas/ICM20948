@@ -552,11 +552,6 @@ private:
     /* Magnetometer soft iron distortion correction */
     float m_scale_mx = 1, m_scale_my = 1, m_scale_mz = 1;
     
-    /*  TODO: transform the magnetometer values to match the coordinate system of the IMU???
-    {1,  0,  0};
-    {0, -1,  0};
-    {0,  0, -1} */
-    
     /* Private functions */
     virtual void read_register(uint16_t addr, uint8_t numBytes, uint8_t *data){};
     virtual void write_register(uint16_t addr, uint8_t data){};
