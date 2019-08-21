@@ -117,10 +117,10 @@ bool ICM20948::init() {
     
     /* After performing magnetometer calibration, magnetometer hard iron distortion correction 
        values can be entered here. Zero means no hard iron correction is performed. */
-    m_offset_mx = 347.5; m_offset_my = 157.5; m_offset_mz = 159.5;
+    m_offset_mx = 28.5; m_offset_my = 111; m_offset_mz = 79;
     /* After performing magnetometer calibration, magnetometer soft iron distortion correction 
        values can be entered here. One means no soft iron correction is performed. */
-    m_scale_mx = 0.9147; m_scale_my = 1.0739; m_scale_mz = 1.0235;
+    m_scale_mx = 0.9590; m_scale_my = 1.0299; m_scale_mz = 1.0108;
         
     /* Read the magnetometer ST2 register, because else the data is not updated */
     read_mag_register(AK09916_REG_STATUS_2, 1, data);
