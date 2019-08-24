@@ -57,16 +57,26 @@ ICM20948::~ICM20948(void) {
 }
 
 /** Probe for ICM20948 and try to initialize sensor
-*
-* @return
-*   'true' if successful,
-*   'false' on error.
-*/
-bool ICM20948::init() {
+ *
+ * @param[in] offset_mx Magnetometer X axis hard iron distortion correction.
+ * @param[in] offset_my Magnetometer Y axis hard iron distortion correction.
+ * @param[in] offset_mz Magnetometer Z axis hard iron distortion correction.
+ * @param[in] scale_mx Magnetometer X axis soft iron distortion correction.
+ * @param[in] scale_my Magnetometer Y axis soft iron distortion correction.
+ * @param[in] scale_mz Magnetometer Z axis soft iron distortion correction.
+ *
+ * @return
+ *   'true' if successful,
+ *   'false' on error.
+ */
+bool ICM20948::init(float offset_mx, float offset_my, float offset_mz, float scale_mx, float scale_my, float scale_mz) {
     uint8_t data[1];
-    
-    /* Reset ICM20948 */
-    //reset();
+	
+	/* Reset ICM20948 */
+	//reset();
+	
+	m_offset_mx = offset_mx; m_offset_my = offset_my; m_offset_mz = offset_mz;
+	m_scale_mx = scale_mx; m_scale_my = scale_my; m_scale_mz = scale_mz;
     
     /* Auto select best available clock source PLL if ready, else use internal oscillator */
     write_register(ICM20948_REG_PWR_MGMT_1, ICM20948_BIT_CLK_PLL);
@@ -114,13 +124,6 @@ bool ICM20948::init() {
     
     /* Configure magnetometer */
     set_mag_mode(AK09916_MODE_100HZ);
-    
-    /* After performing magnetometer calibration, magnetometer hard iron distortion correction 
-       values can be entered here. Zero means no hard iron correction is performed. */
-    m_offset_mx = 28.5; m_offset_my = 111; m_offset_mz = 79;
-    /* After performing magnetometer calibration, magnetometer soft iron distortion correction 
-       values can be entered here. One means no soft iron correction is performed. */
-    m_scale_mx = 0.9590; m_scale_my = 1.0299; m_scale_mz = 1.0108;
         
     /* Read the magnetometer ST2 register, because else the data is not updated */
     read_mag_register(AK09916_REG_STATUS_2, 1, data);
@@ -704,21 +707,25 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
 /** Magnetometer calibration function. Get magnetometer minimum and maximum values, while moving 
  *  the device in a figure eight. Those values are then used to cancel out hard and soft iron distortions.
  *
- * @param[in] imuInterrupt imu interrupt flag
- * @param[in] time_s Time period in seconds for minimum and maximum value calculation
- * @param[in] mag_minimumRange Minimum range (maximum - minimum value) for all directions. 
- *            If the range is smaller than the minimum range, the time period starts again.
+ * @param[in]  imuInterrupt imu interrupt flag
+ * @param[in]  time_s Time period in seconds for minimum and maximum value calculation
+ * @param[in]  mag_minimumRange Minimum range (maximum - minimum value) for all directions. 
+ *             if the range is smaller than the minimum range, the time period starts again.
+ * @param[out] offset_mx Magnetometer X axis hard iron distortion correction.
+ * @param[out] offset_my Magnetometer Y axis hard iron distortion correction.
+ * @param[out] offset_mz Magnetometer Z axis hard iron distortion correction.
+ * @param[out] scale_mx Magnetometer X axis soft iron distortion correction.
+ * @param[out] scale_my Magnetometer Y axis soft iron distortion correction.
+ * @param[out] scale_mz Magnetometer Z axis soft iron distortion correction.
  *
  * @return
  *   'true' if successful,
  *   'false' on error.
  */
-bool ICM20948::calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange) {
+bool ICM20948::calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange, float &offset_mx, float &offset_my, float &offset_mz, float &scale_mx, float &scale_my, float &scale_mz) {
     int16_t min_mx, max_mx, min_my, max_my, min_mz, max_mz;
     int32_t sum_mx, sum_my, sum_mz;
     int32_t dif_mx, dif_my, dif_mz, dif_m;
-    float offset_mx, offset_my, offset_mz;
-    float scale_mx, scale_my, scale_mz;
     
     /* Reset hard and soft iron correction before calibration. */
     m_offset_mx = 0; m_offset_my = 0; m_offset_mz = 0;

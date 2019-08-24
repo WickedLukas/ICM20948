@@ -331,11 +331,18 @@ public:
 
     /** Probe for ICM20948 and try to initialize sensor
      *
+     * @param[in] offset_mx Magnetometer X axis hard iron distortion correction.
+     * @param[in] offset_my Magnetometer Y axis hard iron distortion correction.
+     * @param[in] offset_mz Magnetometer Z axis hard iron distortion correction.
+     * @param[in] scale_mx Magnetometer X axis soft iron distortion correction.
+     * @param[in] scale_my Magnetometer Y axis soft iron distortion correction.
+     * @param[in] scale_mz Magnetometer Z axis soft iron distortion correction.
+     *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-    bool init();
+    bool init(float offset_mx, float offset_my, float offset_mz, float scale_mx, float scale_my, float scale_mz);
 
     /** Read accelerometer and gyroscope values
      *
@@ -527,16 +534,22 @@ public:
     /** Magnetometer calibration function. Get magnetometer minimum and maximum values, while moving 
      *  the device in a figure eight. Those values are then used to cancel out hard and soft iron distortions.
      *
-     * @param[in] imuInterrupt imu interrupt flag
-     * @param[in] time_s Time period in seconds for minimum and maximum value calculation
-     * @param[in] mag_minimumRange Minimum range (maximum - minimum value) for all directions. 
-     *            If the range is smaller than the minimum range, the time period starts again.
+     * @param[in]  imuInterrupt imu interrupt flag
+     * @param[in]  time_s Time period in seconds for minimum and maximum value calculation
+     * @param[in]  mag_minimumRange Minimum range (maximum - minimum value) for all directions. 
+     *             if the range is smaller than the minimum range, the time period starts again.
+	 * @param[out] offset_mx Magnetometer X axis hard iron distortion correction.
+     * @param[out] offset_my Magnetometer Y axis hard iron distortion correction.
+     * @param[out] offset_mz Magnetometer Z axis hard iron distortion correction.
+     * @param[out] scale_mx Magnetometer X axis soft iron distortion correction.
+     * @param[out] scale_my Magnetometer Y axis soft iron distortion correction.
+     * @param[out] scale_mz Magnetometer Z axis soft iron distortion correction.
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-    bool calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange);
+    bool calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange, float &offset_mx, float &offset_my, float &offset_mz, float &scale_mx, float &scale_my, float &scale_mz);
     
 private:
     /* Private variables */
