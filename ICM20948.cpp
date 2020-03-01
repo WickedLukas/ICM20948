@@ -96,7 +96,7 @@ bool ICM20948::init(float offset_mx, float offset_my, float offset_mz, float sca
     
     /* Check if "Who am I" register was successfully read */
     if (data[0] != ICM20948_DEVICE_ID) {
-        return ERROR;
+        return false;
     }
     
     /* Disable bypass for I2C Master interface pins */
@@ -107,7 +107,7 @@ bool ICM20948::init(float offset_mx, float offset_my, float offset_mz, float sca
     
     /* Check if AK09916 "Who am I" register was successfully read */
     if (data[0] != AK09916_DEVICE_ID) {
-        return ERROR;
+        return false;
     }
      
     // TODO: odr_align_en to sync sample rates seems not to be necessary, at least for maximum sample rates.
@@ -1816,9 +1816,14 @@ uint32_t ICM20948::min_max_mag(volatile bool &imuInterrupt, float time_s, int32_
                     miniumRange_mz = true;
                 }
                 
-                DEBUG_PRINT(min_mx); DEBUG_PRINT("\t"); DEBUG_PRINT(min_my); DEBUG_PRINT("\t"); DEBUG_PRINTLN(min_mz);
-                DEBUG_PRINT(max_mx); DEBUG_PRINT("\t"); DEBUG_PRINT(max_my); DEBUG_PRINT("\t"); DEBUG_PRINTLN(max_mz);
-                DEBUG_PRINTLN();
+                // run serial print at a rate independent of the main loop
+                static uint32_t t0_serial = micros();
+                if (micros() - t0_serial > 16666) {
+			        t0_serial = micros();
+                    DEBUG_PRINT(min_mx); DEBUG_PRINT("\t"); DEBUG_PRINT(min_my); DEBUG_PRINT("\t"); DEBUG_PRINTLN(min_mz);
+                    DEBUG_PRINT(max_mx); DEBUG_PRINT("\t"); DEBUG_PRINT(max_my); DEBUG_PRINT("\t"); DEBUG_PRINTLN(max_mz);
+                    DEBUG_PRINTLN();
+				}
             }
         }
     }
