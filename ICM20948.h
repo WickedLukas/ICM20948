@@ -565,10 +565,10 @@ private:
     /* Magnetometer soft iron distortion correction */
     float m_scale_mx = 1, m_scale_my = 1, m_scale_mz = 1;
     
-    /* Private functions */
-    virtual void read_register(uint16_t addr, uint8_t numBytes, uint8_t *data){};
-    virtual void write_register(uint16_t addr, uint8_t data){};
-    virtual void select_bank(uint8_t bank){};
+    /* Pure virtual functions */
+    virtual void read_register(uint16_t addr, uint8_t numBytes, uint8_t *data) = 0;
+    virtual void write_register(uint16_t addr, uint8_t data) = 0;
+    virtual void select_bank(uint8_t bank) = 0;
     
     void read_mag_register(uint8_t addr, uint8_t numBytes, uint8_t *data);
     void write_mag_register(uint8_t addr, uint8_t data);

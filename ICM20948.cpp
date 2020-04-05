@@ -505,6 +505,9 @@ bool ICM20948::reset_accel_gyro_offsets(){
     set_accel_offsets(32513, 2081, 32679);
     set_gyro_offsets(0, 0, 0);
     
+    /*set_accel_offsets(1625, 749, 32592);
+    set_gyro_offsets(0, 0, 0);*/
+    
     return true;
 }
 
@@ -542,6 +545,22 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     
     get_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
     get_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
+    
+    DEBUG_PRINTLN(F("Internal sensor offsets:"));
+    DEBUG_PRINT("a/g:\t");
+    DEBUG_PRINT(offset_ax_32g);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_ay_32g);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_az_32g);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_gx_1000dps);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_gy_1000dps);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_gz_1000dps);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINTLN(); 
     
     /* Convert offsets to the current accelerometer and gyroscope full scale settings */
     offset_ax = offset_ax_32g / accel_offset_scale + 0.5;
