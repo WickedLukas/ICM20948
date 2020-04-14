@@ -531,6 +531,20 @@ public:
      */
     bool calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps);
     
+     /** Accelerometer calibration function. Get accelerometer mean values, while device is at rest and in level.
+     *  Those are then loaded into ICM20948 bias registers to remove the static offset error.
+     *
+     * @param[in] imuInterrupt imu interrupt flag
+     * @param[in] time_s Time period in seconds for mean value calculation
+     * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
+     *            target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
+     *
+     * @return
+     *   'true' if successful,
+     *   'false' on error.
+     */
+    bool calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g);
+    
     /** Magnetometer calibration function. Get magnetometer minimum and maximum values, while moving 
      *  the device in a figure eight. Those values are then used to cancel out hard and soft iron distortions.
      *

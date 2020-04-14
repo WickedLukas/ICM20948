@@ -559,7 +559,6 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     DEBUG_PRINT(offset_gy_1000dps);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(offset_gz_1000dps);
-    DEBUG_PRINT("\t");
     DEBUG_PRINTLN(); 
     
     /* Convert offsets to the current accelerometer and gyroscope full scale settings */
@@ -569,11 +568,11 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     offset_gx = offset_gx_1000dps / gyro_offset_scale + 0.5;
     offset_gy = offset_gy_1000dps / gyro_offset_scale + 0.5;
     offset_gz = offset_gz_1000dps / gyro_offset_scale + 0.5;
-      
+    
     static uint16_t step = 0;
     while (1) {
         mean_accel_gyro(imuInterrupt, time_s, mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz);
-                
+        
         if ((abs(mean_ax) < accel_tolerance) &&
         (abs(mean_ay) < accel_tolerance) &&
         (abs(mean_az - m_g) < accel_tolerance) &&
@@ -582,7 +581,7 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
         (abs(mean_gz) < gyro_tolerance)) {
             break;
         }
-     
+        
         offset_ax -= mean_ax;
         offset_ay -= mean_ay;
         offset_az -= mean_az - m_g;
@@ -621,7 +620,6 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     DEBUG_PRINT(offset_gy_1000dps);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(offset_gz_1000dps);
-    DEBUG_PRINT("\t");
     DEBUG_PRINTLN();
 
     DEBUG_PRINTLN(F("Mean measurement error:"));
@@ -708,7 +706,6 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     DEBUG_PRINT(offset_gy_1000dps);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(offset_gz_1000dps);
-    DEBUG_PRINT("\t");
     DEBUG_PRINTLN();
 
     DEBUG_PRINTLN(F("Mean measurement error:"));
@@ -718,6 +715,96 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     DEBUG_PRINT(mean_gy);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(mean_gz);
+    DEBUG_PRINTLN();
+    
+    return true;
+}
+
+/** Accelerometer calibration function. Get accelerometer mean values, while device is at rest and in level.
+ *  Those are then loaded into ICM20948 bias registers to remove the static offset error.
+ *
+ * @param[in] imuInterrupt imu interrupt flag
+ * @param[in] time_s Time period in seconds for mean value calculation
+ * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
+ * target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
+ *
+ * @return
+ *   'true' if successful,
+ *   'false' on error.
+ */
+bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g) {
+    /* Scale factor to convert accelerometer values into 32g full scale */
+    float accel_offset_scale = (m_accelRes * 32768.0f) / 32;
+    
+    /* Accelerometer tolerance in current full scale format */
+    int32_t accel_tolerance = accel_tolerance_32g * accel_offset_scale + 0.5;
+    
+    int16_t mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz;
+    int32_t offset_ax, offset_ay, offset_az;
+    int16_t offset_ax_32g, offset_ay_32g, offset_az_32g;
+    
+    DEBUG_PRINTLN(F("Calibrating accelerometer. Keep device at rest and in level ..."));
+    
+    get_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
+    
+    DEBUG_PRINTLN(F("Internal sensor offsets:"));
+    DEBUG_PRINT("a/g:\t");
+    DEBUG_PRINT(offset_ax_32g);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_ay_32g);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_az_32g);
+    DEBUG_PRINTLN(); 
+    
+    /* Convert offsets to the current accelerometer full scale settings */
+    offset_ax = offset_ax_32g / accel_offset_scale + 0.5;
+    offset_ay = offset_ay_32g / accel_offset_scale + 0.5;
+    offset_az = offset_az_32g / accel_offset_scale + 0.5;
+      
+    static uint16_t step = 0;
+    while (1) {
+        mean_accel_gyro(imuInterrupt, time_s, mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz);
+                
+        if ((abs(mean_ax) < accel_tolerance) &&
+        (abs(mean_ay) < accel_tolerance) &&
+        (abs(mean_az - m_g) < accel_tolerance)) {
+            break;
+        }
+     
+        offset_ax -= mean_ax;
+        offset_ay -= mean_ay;
+        offset_az -= mean_az - m_g;
+        
+        /* Before writing the offsets to the registers, they need need to be converted to 32g accelerometer full scale */
+        offset_ax_32g = offset_ax * accel_offset_scale + 0.5;
+        offset_ay_32g = offset_ay * accel_offset_scale + 0.5;
+        offset_az_32g = offset_az * accel_offset_scale + 0.5;
+        
+        set_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
+        
+        step++;
+    }
+    
+    DEBUG_PRINT(F("Step count:\t"));
+    DEBUG_PRINT(step);
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Updated internal sensor offsets:"));
+    DEBUG_PRINT("a:\t");
+    DEBUG_PRINT(offset_ax_32g);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_ay_32g);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_az_32g);
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Mean measurement error:"));
+    DEBUG_PRINT("a:\t");
+    DEBUG_PRINT(mean_ax);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(mean_ay);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(mean_az - m_g);
     DEBUG_PRINTLN();
     
     return true;
