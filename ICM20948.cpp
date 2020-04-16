@@ -75,9 +75,6 @@ bool ICM20948::init(float offset_mx, float offset_my, float offset_mz, float sca
     /* Reset ICM20948 */
     //reset();
     
-    /* Reset magnetometer */
-    //reset_mag();
-    
     m_offset_mx = offset_mx; m_offset_my = offset_my; m_offset_mz = offset_mz;
     m_scale_mx = scale_mx; m_scale_my = scale_my; m_scale_mz = scale_mz;
     
@@ -869,6 +866,10 @@ bool ICM20948::calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t 
     scale_mx = (float) dif_m / dif_mx;
     scale_my = (float) dif_m / dif_my;
     scale_mz = (float) dif_m / dif_mz;
+    
+    /* Apply calibration result. */
+    m_offset_mx = offset_mx; m_offset_my = offset_my; m_offset_mz = offset_mz;
+    m_scale_mx = scale_mx; m_scale_my = scale_my; m_scale_mz = scale_mz;
     
     DEBUG_PRINTLN(F("Hard iron correction values (center values):"));
     DEBUG_PRINT2(offset_mx, 1);
