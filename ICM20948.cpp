@@ -71,12 +71,15 @@ ICM20948::~ICM20948(void) {
  */
 bool ICM20948::init(float offset_mx, float offset_my, float offset_mz, float scale_mx, float scale_my, float scale_mz) {
     uint8_t data[1];
-	
-	/* Reset ICM20948 */
-	//reset();
-	
-	m_offset_mx = offset_mx; m_offset_my = offset_my; m_offset_mz = offset_mz;
-	m_scale_mx = scale_mx; m_scale_my = scale_my; m_scale_mz = scale_mz;
+    
+    /* Reset ICM20948 */
+    //reset();
+    
+    /* Reset magnetometer */
+    reset_mag();
+    
+    m_offset_mx = offset_mx; m_offset_my = offset_my; m_offset_mz = offset_mz;
+    m_scale_mx = scale_mx; m_scale_my = scale_my; m_scale_mz = scale_mz;
     
     /* Auto select best available clock source PLL if ready, else use internal oscillator */
     write_register(ICM20948_REG_PWR_MGMT_1, ICM20948_BIT_CLK_PLL);
@@ -546,7 +549,7 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     get_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
     get_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
     
-    DEBUG_PRINTLN(F("Internal sensor offsets:"));
+    /*DEBUG_PRINTLN(F("Internal sensor offsets:"));
     DEBUG_PRINT("a/g:\t");
     DEBUG_PRINT(offset_ax_32g);
     DEBUG_PRINT("\t");
@@ -559,7 +562,7 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     DEBUG_PRINT(offset_gy_1000dps);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(offset_gz_1000dps);
-    DEBUG_PRINTLN(); 
+    DEBUG_PRINTLN();*/
     
     /* Convert offsets to the current accelerometer and gyroscope full scale settings */
     offset_ax = offset_ax_32g / accel_offset_scale + 0.5;
@@ -603,10 +606,6 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
         step++;
     }
     
-    DEBUG_PRINT(F("Step count:\t"));
-    DEBUG_PRINT(step);
-    DEBUG_PRINTLN();
-
     DEBUG_PRINTLN(F("Updated internal sensor offsets:"));
     DEBUG_PRINT("a/g:\t");
     DEBUG_PRINT(offset_ax_32g);
@@ -621,7 +620,7 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     DEBUG_PRINT("\t");
     DEBUG_PRINT(offset_gz_1000dps);
     DEBUG_PRINTLN();
-
+    
     DEBUG_PRINTLN(F("Mean measurement error:"));
     DEBUG_PRINT("a/g:\t");
     DEBUG_PRINT(mean_ax);
@@ -635,6 +634,10 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     DEBUG_PRINT(mean_gy);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(mean_gz);
+    DEBUG_PRINTLN();
+    
+    DEBUG_PRINT(F("Step count:\t"));
+    DEBUG_PRINT(step);
     DEBUG_PRINTLN();
     
     return true;
@@ -666,6 +669,15 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     
     get_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
     
+    /*DEBUG_PRINTLN(F("Internal sensor offsets:"));
+    DEBUG_PRINT("g:\t");
+    DEBUG_PRINT(offset_gx_1000dps);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_gy_1000dps);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(offset_gz_1000dps);
+    DEBUG_PRINTLN();*/
+    
     /* Convert offsets to the current gyroscope full scale setting */
     offset_gx = offset_gx_1000dps / gyro_offset_scale + 0.5;
     offset_gy = offset_gy_1000dps / gyro_offset_scale + 0.5;
@@ -674,13 +686,13 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     static uint16_t step = 0;
     while (1) {
         mean_accel_gyro(imuInterrupt, time_s, mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz);
-                
+        
         if ((abs(mean_gx) < gyro_tolerance) &&
         (abs(mean_gy) < gyro_tolerance) &&
         (abs(mean_gz) < gyro_tolerance)) {
             break;
         }
-     
+        
         offset_gx -= mean_gx;
         offset_gy -= mean_gy;
         offset_gz -= mean_gz;
@@ -695,10 +707,6 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
         step++;
     }
     
-    DEBUG_PRINT(F("Step count:\t"));
-    DEBUG_PRINT(step);
-    DEBUG_PRINTLN();
-
     DEBUG_PRINTLN(F("Updated internal sensor offsets:"));
     DEBUG_PRINT("g:\t");
     DEBUG_PRINT(offset_gx_1000dps);
@@ -707,7 +715,7 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     DEBUG_PRINT("\t");
     DEBUG_PRINT(offset_gz_1000dps);
     DEBUG_PRINTLN();
-
+    
     DEBUG_PRINTLN(F("Mean measurement error:"));
     DEBUG_PRINT("g:\t");
     DEBUG_PRINT(mean_gx);
@@ -715,6 +723,10 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     DEBUG_PRINT(mean_gy);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(mean_gz);
+    DEBUG_PRINTLN();
+    
+    DEBUG_PRINT(F("Step count:\t"));
+    DEBUG_PRINT(step);
     DEBUG_PRINTLN();
     
     return true;
@@ -747,14 +759,14 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
     
     get_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
     
-    DEBUG_PRINTLN(F("Internal sensor offsets:"));
-    DEBUG_PRINT("a/g:\t");
+    /*DEBUG_PRINTLN(F("Internal sensor offsets:"));
+    DEBUG_PRINT("a:\t");
     DEBUG_PRINT(offset_ax_32g);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(offset_ay_32g);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(offset_az_32g);
-    DEBUG_PRINTLN(); 
+    DEBUG_PRINTLN();*/
     
     /* Convert offsets to the current accelerometer full scale settings */
     offset_ax = offset_ax_32g / accel_offset_scale + 0.5;
@@ -764,13 +776,13 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
     static uint16_t step = 0;
     while (1) {
         mean_accel_gyro(imuInterrupt, time_s, mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz);
-                
+        
         if ((abs(mean_ax) < accel_tolerance) &&
         (abs(mean_ay) < accel_tolerance) &&
         (abs(mean_az - m_g) < accel_tolerance)) {
             break;
         }
-     
+        
         offset_ax -= mean_ax;
         offset_ay -= mean_ay;
         offset_az -= mean_az - m_g;
@@ -785,10 +797,6 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
         step++;
     }
     
-    DEBUG_PRINT(F("Step count:\t"));
-    DEBUG_PRINT(step);
-    DEBUG_PRINTLN();
-
     DEBUG_PRINTLN(F("Updated internal sensor offsets:"));
     DEBUG_PRINT("a:\t");
     DEBUG_PRINT(offset_ax_32g);
@@ -797,7 +805,7 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
     DEBUG_PRINT("\t");
     DEBUG_PRINT(offset_az_32g);
     DEBUG_PRINTLN();
-
+    
     DEBUG_PRINTLN(F("Mean measurement error:"));
     DEBUG_PRINT("a:\t");
     DEBUG_PRINT(mean_ax);
@@ -807,6 +815,9 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
     DEBUG_PRINT(mean_az - m_g);
     DEBUG_PRINTLN();
     
+    DEBUG_PRINT(F("Step count:\t"));
+    DEBUG_PRINT(step);
+    DEBUG_PRINTLN();
     return true;
 }
 
