@@ -24,7 +24,7 @@
 #include "ICM20948.h"
 
 /* factor for converting a radian number to an equivalent number in degrees */
-const float RAD2DEG = 4068 / 71;
+const float RAD2DEG = (float) 4068 / 71;
 
 // NOTE! Enabling DEBUG adds about 3.3kB to the flash program size.
 // Debug output is now working even on ATMega328P MCUs (e.g. Arduino Uno)
