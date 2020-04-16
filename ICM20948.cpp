@@ -76,7 +76,7 @@ bool ICM20948::init(float offset_mx, float offset_my, float offset_mz, float sca
     //reset();
     
     /* Reset magnetometer */
-    reset_mag();
+    //reset_mag();
     
     m_offset_mx = offset_mx; m_offset_my = offset_my; m_offset_mz = offset_mz;
     m_scale_mx = scale_mx; m_scale_my = scale_my; m_scale_mz = scale_mz;

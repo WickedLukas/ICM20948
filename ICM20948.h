@@ -307,7 +307,7 @@
 #define AK09916_MODE_100HZ                  0x08                        /**< Magnetometer Measurement Rate = 100HZ  */
 #define AK09916_MODE_ST                     0x16                        /**< Self-test                              */
 
-#define AK09916_REG_CONTROL_3               0x31                        /**< Control 3 register                     */
+#define AK09916_REG_CONTROL_3               0x32                        /**< Control 3 register                     */
 #define AK09916_BIT_SRST                    0x01                        /**< Soft Reset bit                         */
 
 #define AK09916_REG_WHO_AM_I                0x01                        /**< AK09916 Device ID register             */
