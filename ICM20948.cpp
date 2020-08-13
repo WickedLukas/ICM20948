@@ -58,6 +58,12 @@ ICM20948::~ICM20948(void) {
 
 /** Probe for ICM20948 and try to initialize sensor
  *
+ * @param[in] offset_gx_1000dps Gyroscope X axis offset in current full scale format.
+ * @param[in] offset_gy_1000dps Gyroscope Y axis offset in current full scale format.
+ * @param[in] offset_gz_1000dps Gyroscope Z axis offset in current full scale format.
+ * @param[in] offset_ax_32g Accelerometer X axis offset in current full scale format.
+ * @param[in] offset_ay_32g Accelerometer Y axis offset in current full scale format.
+ * @param[in] offset_az_32g Accelerometer Z axis offset in current full scale format.
  * @param[in] offset_mx Magnetometer X axis hard iron distortion correction.
  * @param[in] offset_my Magnetometer Y axis hard iron distortion correction.
  * @param[in] offset_mz Magnetometer Z axis hard iron distortion correction.
@@ -69,14 +75,11 @@ ICM20948::~ICM20948(void) {
  *   'true' if successful,
  *   'false' on error.
  */
-bool ICM20948::init(float offset_mx, float offset_my, float offset_mz, float scale_mx, float scale_my, float scale_mz) {
+bool ICM20948::init(int16_t offset_gx_1000dps, int16_t offset_gy_1000dps, int16_t offset_gz_1000dps, int16_t offset_ax_32g, int16_t offset_ay_32g, int16_t offset_az_32g, float offset_mx, float offset_my, float offset_mz, float scale_mx, float scale_my, float scale_mz) {
     uint8_t data[1];
     
     /* Reset ICM20948 */
     //reset();
-    
-    m_offset_mx = offset_mx; m_offset_my = offset_my; m_offset_mz = offset_mz;
-    m_scale_mx = scale_mx; m_scale_my = scale_my; m_scale_mz = scale_mz;
     
     /* Auto select best available clock source PLL if ready, else use internal oscillator */
     write_register(ICM20948_REG_PWR_MGMT_1, ICM20948_BIT_CLK_PLL);
@@ -101,7 +104,7 @@ bool ICM20948::init(float offset_mx, float offset_my, float offset_mz, float sca
     
     /* Disable bypass for I2C Master interface pins */
     enable_irq(false, false);
-         
+    
     /* Read AK09916 "Who am I" register */
     read_mag_register(AK09916_REG_WHO_AM_I, 1, data);
     
@@ -124,13 +127,19 @@ bool ICM20948::init(float offset_mx, float offset_my, float offset_mz, float sca
     
     /* Configure magnetometer */
     set_mag_mode(AK09916_MODE_100HZ);
-        
+    
+    /* Apply calibration data */
+    set_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
+    set_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
+    m_offset_mx = offset_mx; m_offset_my = offset_my; m_offset_mz = offset_mz;
+    m_scale_mx = scale_mx; m_scale_my = scale_my; m_scale_mz = scale_mz;
+    
     /* Read the magnetometer ST2 register, because else the data is not updated */
     read_mag_register(AK09916_REG_STATUS_2, 1, data);
-        
+    
     /* Enable Raw Data Ready interrupt */
     enable_irq(true, false);
-      
+    
     return true;
 }
 
@@ -521,12 +530,18 @@ bool ICM20948::reset_accel_gyro_offsets(){
  * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
  * target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
  * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale
+ * @param[out] offset_ax_32g Accelerometer X axis offset in current full scale format.
+ * @param[out] offset_ay_32g Accelerometer Y axis offset in current full scale format.
+ * @param[out] offset_az_32g Accelerometer Z axis offset in current full scale format.
+ * @param[out] offset_gx_1000dps Gyroscope X axis offset in current full scale format.
+ * @param[out] offset_gy_1000dps Gyroscope Y axis offset in current full scale format.
+ * @param[out] offset_gz_1000dps Gyroscope Z axis offset in current full scale format.
  *
  * @return
  *   'true' if successful,
  *   'false' on error.
  */
-bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps) {
+bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps, int16_t &offset_ax_32g, int16_t &offset_ay_32g, int16_t &offset_az_32g, int16_t &offset_gx_1000dps, int16_t &offset_gy_1000dps, int16_t &offset_gz_1000dps) {
     /* Scale factor to convert accelerometer values into 32g full scale */
     float accel_offset_scale = (m_accelRes * 32768.0f) / 32;
     /* Scale factor to convert gyroscope values into 1000dps full scale */
@@ -539,7 +554,6 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     
     int16_t mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz;
     int32_t offset_ax, offset_ay, offset_az, offset_gx, offset_gy, offset_gz;
-    int16_t offset_ax_32g, offset_ay_32g, offset_az_32g, offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps;
     
     DEBUG_PRINTLN(F("Calibrating accelerometer and gyroscope. Keep device at rest and in level ..."));
     
@@ -646,12 +660,15 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
  * @param[in] imuInterrupt imu interrupt flag
  * @param[in] time_s Time period in seconds for mean value calculation
  * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero in 1000dps full scale format
+ * @param[out] offset_gx_1000dps Gyroscope X axis offset in current full scale format.
+ * @param[out] offset_gy_1000dps Gyroscope Y axis offset in current full scale format.
+ * @param[out] offset_gz_1000dps Gyroscope Z axis offset in current full scale format.
  *
  * @return
  *   'true' if successful,
  *   'false' on error.
  */
-bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps) {
+bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps, int16_t &offset_gx_1000dps, int16_t &offset_gy_1000dps, int16_t &offset_gz_1000dps) {
     /* Scale factor to convert gyroscope values into 1000dps full scale */
     float gyro_offset_scale = (m_gyroRes * 32768.0f) / 1000;
     
@@ -660,7 +677,6 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     
     int16_t mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz;
     int32_t offset_gx, offset_gy, offset_gz;
-    int16_t offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps;
     
     DEBUG_PRINTLN(F("Calibrating gyroscope. Keep device at rest ..."));
     
@@ -736,12 +752,15 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
  * @param[in] time_s Time period in seconds for mean value calculation
  * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
  * target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
+ * @param[out] offset_ax_32g Accelerometer X axis offset in current full scale format.
+ * @param[out] offset_ay_32g Accelerometer Y axis offset in current full scale format.
+ * @param[out] offset_az_32g Accelerometer Z axis offset in current full scale format.
  *
  * @return
  *   'true' if successful,
  *   'false' on error.
  */
-bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g) {
+bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int16_t &offset_ax_32g, int16_t &offset_ay_32g, int16_t &offset_az_32g) {
     /* Scale factor to convert accelerometer values into 32g full scale */
     float accel_offset_scale = (m_accelRes * 32768.0f) / 32;
     
@@ -750,7 +769,6 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
     
     int16_t mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz;
     int32_t offset_ax, offset_ay, offset_az;
-    int16_t offset_ax_32g, offset_ay_32g, offset_az_32g;
     
     DEBUG_PRINTLN(F("Calibrating accelerometer. Keep device at rest and in level ..."));
     
