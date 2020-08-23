@@ -143,6 +143,15 @@ bool ICM20948::init(int16_t offset_gx_1000dps, int16_t offset_gy_1000dps, int16_
     return true;
 }
 
+/** Read accelerometer resolution
+ *
+ * @param[out] accelRes Accelerometer resolution in g/bit
+ *
+ */
+void ICM20948::read_accelRes(float &accelRes){
+    accelRes = m_accelRes;
+}
+
 /** Read accelerometer and gyroscope values
  *
  * @param[out] ax Accelerometer X axis value

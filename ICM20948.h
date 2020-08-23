@@ -350,6 +350,13 @@ public:
      */
     bool init(int16_t offset_gx_1000dps, int16_t offset_gy_1000dps, int16_t offset_gz_1000dps, int16_t offset_ax_32g, int16_t offset_ay_32g, int16_t offset_az_32g, float offset_mx, float offset_my, float offset_mz, float scale_mx, float scale_my, float scale_mz);
 
+    /** Read accelerometer resolution
+     *
+     * @param[out] accelRes Accelerometer resolution in g/bit
+     *
+     */
+    void read_accelRes(float &accelRes);
+
     /** Read accelerometer and gyroscope values
      *
      * @param[out] ax Accelerometer X axis value
