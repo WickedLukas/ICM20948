@@ -116,7 +116,7 @@ bool ICM20948::init(int16_t offset_gx_1000dps, int16_t offset_gy_1000dps, int16_
     // TODO: odr_align_en to sync sample rates seems not to be necessary, at least for maximum sample rates.
     
     /* Configure accelerometer */
-    set_accel_bandwidth(ICM20948_ACCEL_BW_1210HZ);
+    set_accel_bandwidth(ICM20948_ACCEL_BW_6HZ);
     set_accel_fullscale(ICM20948_ACCEL_FULLSCALE_8G);
     //set_accel_sample_rate_div(...);    /* the accelerometer sample rate is 4500 Hz for ICM20948_ACCEL_BW_1210HZ */
     
