@@ -127,7 +127,6 @@ bool ICM20948::init(int16_t *gyroOffset_1000dps_xyz, int16_t *accelOffset_32g_xy
     m_magScale_xyz[0] = magScale_xyz[0]; m_magScale_xyz[1] = magScale_xyz[1]; m_magScale_xyz[2] = magScale_xyz[2];
 
     DEBUG_PRINTLN(F("Gyroscope offsets:"));
-    DEBUG_PRINT("g:\t");
     DEBUG_PRINT(gyroOffset_1000dps_xyz[0]);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(gyroOffset_1000dps_xyz[1]);
@@ -136,7 +135,6 @@ bool ICM20948::init(int16_t *gyroOffset_1000dps_xyz, int16_t *accelOffset_32g_xy
     DEBUG_PRINTLN();
 
     DEBUG_PRINTLN(F("Accelerometer offsets:"));
-    DEBUG_PRINT("a:\t");
     DEBUG_PRINT(accelOffset_32g_xyz[0]);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(accelOffset_32g_xyz[1]);
@@ -634,14 +632,15 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
         step++;
     }
     
-    DEBUG_PRINTLN(F("Updated internal accelerometer and gyroscope offsets:"));
-    DEBUG_PRINT("a/g:\t");
+    DEBUG_PRINTLN(F("Updated internal accelerometer offsets:"));
     DEBUG_PRINT(accelOffset_32g_xyz[0]);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(accelOffset_32g_xyz[1]);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(accelOffset_32g_xyz[2]);
-    DEBUG_PRINT("\t");
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Updated internal gyroscope offsets:"));
     DEBUG_PRINT(gyroOffset_1000dps_xyz[0]);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(gyroOffset_1000dps_xyz[1]);
@@ -649,14 +648,15 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     DEBUG_PRINT(gyroOffset_1000dps_xyz[2]);
     DEBUG_PRINTLN();
     
-    DEBUG_PRINTLN(F("Mean measurement error:"));
-    DEBUG_PRINT("a/g:\t");
+    DEBUG_PRINTLN(F("Mean accelerometer measurement error:"));
     DEBUG_PRINT(mean_ax);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(mean_ay);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(mean_az - m_g);
-    DEBUG_PRINT("\t");
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Mean gyroscope measurement error:"));
     DEBUG_PRINT(mean_gx);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(mean_gy);
@@ -727,7 +727,6 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     }
     
     DEBUG_PRINTLN(F("Updated internal gyroscope offsets:"));
-    DEBUG_PRINT("g:\t");
     DEBUG_PRINT(gyroOffset_1000dps_xyz[0]);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(gyroOffset_1000dps_xyz[1]);
@@ -735,8 +734,7 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     DEBUG_PRINT(gyroOffset_1000dps_xyz[2]);
     DEBUG_PRINTLN();
     
-    DEBUG_PRINTLN(F("Mean measurement error:"));
-    DEBUG_PRINT("g:\t");
+    DEBUG_PRINTLN(F("Mean gyroscope measurement error:"));
     DEBUG_PRINT(mean_gx);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(mean_gy);
@@ -808,7 +806,6 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
     }
     
     DEBUG_PRINTLN(F("Updated internal accelerometer offsets:"));
-    DEBUG_PRINT("a:\t");
     DEBUG_PRINT(accelOffset_32g_xyz[0]);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(accelOffset_32g_xyz[1]);
@@ -816,8 +813,7 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
     DEBUG_PRINT(accelOffset_32g_xyz[2]);
     DEBUG_PRINTLN();
     
-    DEBUG_PRINTLN(F("Mean measurement error:"));
-    DEBUG_PRINT("a:\t");
+    DEBUG_PRINTLN(F("Mean accelerometer measurement error:"));
     DEBUG_PRINT(mean_ax);
     DEBUG_PRINT("\t");
     DEBUG_PRINT(mean_ay);
@@ -1549,7 +1545,7 @@ uint32_t ICM20948::get_accel_offsets(int16_t *accelOffset_xyz) {
  * @brief
  *    Get gyroscope offsets
  *
- * @param[out] gyroOffset_xyz Gyroscope XYZ axis offsets
+ * @param[out] gyroOffset_xyz GyroDEBUG_PRINT("\t");scope XYZ axis offsets
  *
  * @return
  *    'OK' if successful,
