@@ -331,24 +331,16 @@ public:
 
     /** Probe for ICM20948 and try to initialize sensor
      *
-     * @param[in] offset_gx_1000dps Gyroscope X axis offset in current full scale format.
-     * @param[in] offset_gy_1000dps Gyroscope Y axis offset in current full scale format.
-     * @param[in] offset_gz_1000dps Gyroscope Z axis offset in current full scale format.
-     * @param[in] offset_ax_32g Accelerometer X axis offset in current full scale format.
-     * @param[in] offset_ay_32g Accelerometer Y axis offset in current full scale format.
-     * @param[in] offset_az_32g Accelerometer Z axis offset in current full scale format.
-     * @param[in] offset_mx Magnetometer X axis hard iron distortion correction.
-     * @param[in] offset_my Magnetometer Y axis hard iron distortion correction.
-     * @param[in] offset_mz Magnetometer Z axis hard iron distortion correction.
-     * @param[in] scale_mx Magnetometer X axis soft iron distortion correction.
-     * @param[in] scale_my Magnetometer Y axis soft iron distortion correction.
-     * @param[in] scale_mz Magnetometer Z axis soft iron distortion correction.
+     * @param[in] gyroOffset_1000dps_xyz Gyroscope XYZ axis offsets in current full scale format.
+     * @param[in] accelOffset_32g_xyz Accelerometer XYZ axis offsets in current full scale format.
+     * @param[in] magOffset_xyz Magnetometer XYZ axis hard iron distortion correction.
+     * @param[in] magScale_xyz Magnetometer XYZ axis soft iron distortion correction.
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-    bool init(int16_t offset_gx_1000dps, int16_t offset_gy_1000dps, int16_t offset_gz_1000dps, int16_t offset_ax_32g, int16_t offset_ay_32g, int16_t offset_az_32g, float offset_mx, float offset_my, float offset_mz, float scale_mx, float scale_my, float scale_mz);
+    bool init(int16_t *gyroOffset_1000dps_xyz, int16_t *accelOffset_32g_xyz, float *magOffset_xyz, float *magScale_xyz);
 
     /** Read accelerometer resolution
      *
@@ -524,18 +516,14 @@ public:
      * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
      *            target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
      * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale
-     * @param[out] offset_ax_32g Accelerometer X axis offset in current full scale format.
-     * @param[out] offset_ay_32g Accelerometer Y axis offset in current full scale format.
-     * @param[out] offset_az_32g Accelerometer Z axis offset in current full scale format.
-     * @param[out] offset_gx_1000dps Gyroscope X axis offset in current full scale format.
-     * @param[out] offset_gy_1000dps Gyroscope Y axis offset in current full scale format.
-     * @param[out] offset_gz_1000dps Gyroscope Z axis offset in current full scale format.
+     * @param[out] accelOffset_32g_xyz Accelerometer XYZ axis offsets in current full scale format.
+     * @param[out] gyroOffset_1000dps_xyz Gyroscope XYZ axis offsets in current full scale format.
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-    bool calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps, int16_t &offset_ax_32g, int16_t &offset_ay_32g, int16_t &offset_az_32g, int16_t &offset_gx_1000dps, int16_t &offset_gy_1000dps, int16_t &offset_gz_1000dps);
+    bool calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps, int16_t *accelOffset_32g_xyz, int16_t *gyroOffset_1000dps_xyz);
     
     /** Gyroscope calibration function. Get gyroscope mean values, while device is at rest. 
      *  Those are then loaded into ICM20948 bias registers to remove the static offset error.
@@ -543,15 +531,13 @@ public:
      * @param[in] imuInterrupt imu interrupt flag
      * @param[in] time_s Time period in seconds for mean value calculation
      * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero in 1000dps full scale format
-     * @param[out] offset_gx_1000dps Gyroscope X axis offset in current full scale format.
-     * @param[out] offset_gy_1000dps Gyroscope Y axis offset in current full scale format.
-     * @param[out] offset_gz_1000dps Gyroscope Z axis offset in current full scale format.
+     * @param[out] gyroOffset_1000dps_xyz Gyroscope XYZ axis offsets in current full scale format.
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-    bool calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps, int16_t &offset_gx_1000dps, int16_t &offset_gy_1000dps, int16_t &offset_gz_1000dps);
+    bool calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps, int16_t *gyroOffset_1000dps_xyz);
     
      /** Accelerometer calibration function. Get accelerometer mean values, while device is at rest and in level.
      *  Those are then loaded into ICM20948 bias registers to remove the static offset error.
@@ -560,15 +546,13 @@ public:
      * @param[in] time_s Time period in seconds for mean value calculation
      * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
      *            target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
-     * @param[out] offset_ax_32g Accelerometer X axis offset in current full scale format.
-     * @param[out] offset_ay_32g Accelerometer Y axis offset in current full scale format.
-     * @param[out] offset_az_32g Accelerometer Z axis offset in current full scale format.
+     * @param[out] accelOffset_32g_xyz Accelerometer XYZ axis offsets in current full scale format.
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-    bool calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int16_t &offset_ax_32g, int16_t &offset_ay_32g, int16_t &offset_az_32g);
+    bool calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int16_t *accelOffset_32g_xyz);
     
     /** Magnetometer calibration function. Get magnetometer minimum and maximum values, while moving 
      *  the device in a figure eight. Those values are then used to cancel out hard and soft iron distortions.
@@ -577,18 +561,14 @@ public:
      * @param[in]  time_s Time period in seconds for minimum and maximum value calculation
      * @param[in]  mag_minimumRange Minimum range (maximum - minimum value) for all directions. 
      *             if the range is smaller than the minimum range, the time period starts again.
-	 * @param[out] offset_mx Magnetometer X axis hard iron distortion correction.
-     * @param[out] offset_my Magnetometer Y axis hard iron distortion correction.
-     * @param[out] offset_mz Magnetometer Z axis hard iron distortion correction.
-     * @param[out] scale_mx Magnetometer X axis soft iron distortion correction.
-     * @param[out] scale_my Magnetometer Y axis soft iron distortion correction.
-     * @param[out] scale_mz Magnetometer Z axis soft iron distortion correction.
+     * @param[out] magOffset_xyz Magnetometer XYZ axis hard iron distortion corrections.
+     * @param[out] magScale_xyz Magnetometer XYZ axis soft iron distortion corrections.
      *
      * @return
      *   'true' if successful,
      *   'false' on error.
      */
-    bool calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange, float &offset_mx, float &offset_my, float &offset_mz, float &scale_mx, float &scale_my, float &scale_mz);
+    bool calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange, float *magOffset_xyz, float *magScale_xyz);
     
 private:
     /* Private variables */
@@ -600,9 +580,9 @@ private:
     int16_t m_g;    /*  Acceleration of gravity in LSB  */
     
     /* Magnetometer hard iron distortion correction */
-    float m_offset_mx = 0, m_offset_my = 0, m_offset_mz = 0;
+    float m_magOffset_xyz[3] = {0};
     /* Magnetometer soft iron distortion correction */
-    float m_scale_mx = 1, m_scale_my = 1, m_scale_mz = 1;
+    float m_magScale_xyz[3] = {1};
     
     /* Pure virtual functions */
     virtual void read_register(uint16_t addr, uint8_t numBytes, uint8_t *data) = 0;
@@ -622,12 +602,12 @@ private:
     uint32_t set_accel_fullscale(uint8_t accelFs);
     uint32_t set_gyro_fullscale(uint8_t gyroFs);
     uint32_t set_mag_mode(uint8_t magMode);
-    uint32_t set_accel_offsets(int16_t offset_ax, int16_t offset_ay, int16_t offset_az);
-    uint32_t set_gyro_offsets(int16_t offset_gx, int16_t offset_gy, int16_t offset_gz);
+    uint32_t set_accel_offsets(const int16_t * const accelOffset_xyz);
+    uint32_t set_gyro_offsets(const int16_t * const gyroOffset_xyz);
     uint32_t get_accel_resolution(float &accelRes);
     uint32_t get_gyro_resolution(float &gyroRes);
-    uint32_t get_accel_offsets(int16_t &offset_ax, int16_t &offset_ay, int16_t &offset_az);
-    uint32_t get_gyro_offsets(int16_t &offset_gx, int16_t &offset_gy, int16_t &offset_gz);
+    uint32_t get_accel_offsets(int16_t *accelOffset_xyz);
+    uint32_t get_gyro_offsets(int16_t *gyroOffset_xyz);
     uint32_t enable_sleepmode(bool enable);
     uint32_t enable_cyclemode(bool enable);
     uint32_t enable_sensor(bool accel, bool gyro, bool temp);

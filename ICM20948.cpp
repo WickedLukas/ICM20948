@@ -58,24 +58,16 @@ ICM20948::~ICM20948(void) {
 
 /** Probe for ICM20948 and try to initialize sensor
  *
- * @param[in] offset_gx_1000dps Gyroscope X axis offset in current full scale format.
- * @param[in] offset_gy_1000dps Gyroscope Y axis offset in current full scale format.
- * @param[in] offset_gz_1000dps Gyroscope Z axis offset in current full scale format.
- * @param[in] offset_ax_32g Accelerometer X axis offset in current full scale format.
- * @param[in] offset_ay_32g Accelerometer Y axis offset in current full scale format.
- * @param[in] offset_az_32g Accelerometer Z axis offset in current full scale format.
- * @param[in] offset_mx Magnetometer X axis hard iron distortion correction.
- * @param[in] offset_my Magnetometer Y axis hard iron distortion correction.
- * @param[in] offset_mz Magnetometer Z axis hard iron distortion correction.
- * @param[in] scale_mx Magnetometer X axis soft iron distortion correction.
- * @param[in] scale_my Magnetometer Y axis soft iron distortion correction.
- * @param[in] scale_mz Magnetometer Z axis soft iron distortion correction.
+ * @param[in] gyroOffset_1000dps_xyz Gyroscope XYZ axis offsets in current full scale format.
+ * @param[in] accelOffset_32g_xyz Accelerometer XYZ axis offsets in current full scale format.
+ * @param[in] magOffset_xyz Magnetometer XYZ axis hard iron distortion correction.
+ * @param[in] magScale_xyz Magnetometer XYZ axis soft iron distortion correction.
  *
  * @return
  *   'true' if successful,
  *   'false' on error.
  */
-bool ICM20948::init(int16_t offset_gx_1000dps, int16_t offset_gy_1000dps, int16_t offset_gz_1000dps, int16_t offset_ax_32g, int16_t offset_ay_32g, int16_t offset_az_32g, float offset_mx, float offset_my, float offset_mz, float scale_mx, float scale_my, float scale_mz) {
+bool ICM20948::init(int16_t *gyroOffset_1000dps_xyz, int16_t *accelOffset_32g_xyz, float *magOffset_xyz, float *magScale_xyz) {
     uint8_t data[1];
     
     /* Reset ICM20948 */
@@ -129,10 +121,45 @@ bool ICM20948::init(int16_t offset_gx_1000dps, int16_t offset_gy_1000dps, int16_
     set_mag_mode(AK09916_MODE_100HZ);
     
     /* Apply calibration data */
-    set_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
-    set_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
-    m_offset_mx = offset_mx; m_offset_my = offset_my; m_offset_mz = offset_mz;
-    m_scale_mx = scale_mx; m_scale_my = scale_my; m_scale_mz = scale_mz;
+    set_gyro_offsets(gyroOffset_1000dps_xyz);
+    set_accel_offsets(accelOffset_32g_xyz);
+    m_magOffset_xyz[0] = magOffset_xyz[0]; m_magOffset_xyz[1] = magOffset_xyz[1]; m_magOffset_xyz[2] = magOffset_xyz[2];
+    m_magScale_xyz[0] = magScale_xyz[0]; m_magScale_xyz[1] = magScale_xyz[1]; m_magScale_xyz[2] = magScale_xyz[2];
+
+    DEBUG_PRINTLN(F("Gyroscope offsets:"));
+    DEBUG_PRINT("g:\t");
+    DEBUG_PRINT(gyroOffset_1000dps_xyz[0]);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(gyroOffset_1000dps_xyz[1]);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(gyroOffset_1000dps_xyz[2]);
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Accelerometer offsets:"));
+    DEBUG_PRINT("a:\t");
+    DEBUG_PRINT(accelOffset_32g_xyz[0]);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(accelOffset_32g_xyz[1]);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT(accelOffset_32g_xyz[2]);
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Magnetometer offsets:"));
+    DEBUG_PRINT2(magOffset_xyz[0], 1);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT2(magOffset_xyz[1], 1);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT2(magOffset_xyz[2], 1);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINTLN();
+
+    DEBUG_PRINTLN(F("Magnetometer scalings:"));
+    DEBUG_PRINT2(magScale_xyz[0], 4);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT2(magScale_xyz[1], 4);
+    DEBUG_PRINT("\t");
+    DEBUG_PRINT2(magScale_xyz[2], 4);
+    DEBUG_PRINTLN();
     
     /* Read the magnetometer ST2 register, because else the data is not updated */
     read_mag_register(AK09916_REG_STATUS_2, 1, data);
@@ -293,9 +320,9 @@ bool ICM20948::read_mag(int16_t &mx, int16_t &my, int16_t &mz) {
                 mz = -mz;                
                 
                 /* Apply hard and soft iron distortion correction */
-                mx = ((mx + m_offset_mx) * m_scale_mx) + 0.5;
-                my = ((my + m_offset_my) * m_scale_my) + 0.5;
-                mz = ((mz + m_offset_mz) * m_scale_mz) + 0.5;
+                mx = ((mx + m_magOffset_xyz[0]) * m_magScale_xyz[0]) + 0.5;
+                my = ((my + m_magOffset_xyz[1]) * m_magScale_xyz[1]) + 0.5;
+                mz = ((mz + m_magOffset_xyz[2]) * m_magScale_xyz[2]) + 0.5;
                 
                 status = 4;
                 return true;
@@ -520,11 +547,11 @@ bool ICM20948::read_gyro_rps(float &gx_rps, float &gy_rps, float &gz_rps) {
  */
 bool ICM20948::reset_accel_gyro_offsets(){
     /* set factory default offsets */
-    set_accel_offsets(32513, 2081, 32679);
-    set_gyro_offsets(0, 0, 0);
+    set_accel_offsets((const int16_t[]) {32513, 2081, 32679});
+    set_gyro_offsets((const int16_t[]) {0, 0, 0});
     
-    /*set_accel_offsets(1625, 749, 32592);
-    set_gyro_offsets(0, 0, 0);*/
+    /*set_accel_offsets((const int16_t[]) {1625, 749, 32592});
+    set_gyro_offsets((const int16_t[]) {0, 0, 0});*/
     
     return true;
 }
@@ -539,18 +566,14 @@ bool ICM20948::reset_accel_gyro_offsets(){
  * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
  * target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
  * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero after calibration at 1000dps full scale
- * @param[out] offset_ax_32g Accelerometer X axis offset in current full scale format.
- * @param[out] offset_ay_32g Accelerometer Y axis offset in current full scale format.
- * @param[out] offset_az_32g Accelerometer Z axis offset in current full scale format.
- * @param[out] offset_gx_1000dps Gyroscope X axis offset in current full scale format.
- * @param[out] offset_gy_1000dps Gyroscope Y axis offset in current full scale format.
- * @param[out] offset_gz_1000dps Gyroscope Z axis offset in current full scale format.
+ * @param[out] accelOffset_32g_xyz Accelerometer XYZ axis offsets in current full scale format.
+ * @param[out] gyroOffset_1000dps_xyz Gyroscope XYZ axis offsets in current full scale format.
  *
  * @return
  *   'true' if successful,
  *   'false' on error.
  */
-bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps, int16_t &offset_ax_32g, int16_t &offset_ay_32g, int16_t &offset_az_32g, int16_t &offset_gx_1000dps, int16_t &offset_gy_1000dps, int16_t &offset_gz_1000dps) {
+bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int32_t gyro_tolerance_1000dps, int16_t *accelOffset_32g_xyz, int16_t *gyroOffset_1000dps_xyz) {
     /* Scale factor to convert accelerometer values into 32g full scale */
     float accel_offset_scale = (m_accelRes * 32768.0f) / 32;
     /* Scale factor to convert gyroscope values into 1000dps full scale */
@@ -566,31 +589,16 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
     
     DEBUG_PRINTLN(F("Calibrating accelerometer and gyroscope. Keep device at rest and in level ..."));
     
-    get_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
-    get_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
-    
-    /*DEBUG_PRINTLN(F("Internal sensor offsets:"));
-    DEBUG_PRINT("a/g:\t");
-    DEBUG_PRINT(offset_ax_32g);
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_ay_32g);
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_az_32g);
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gx_1000dps);
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gy_1000dps);
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gz_1000dps);
-    DEBUG_PRINTLN();*/
+    get_accel_offsets(accelOffset_32g_xyz);
+    get_gyro_offsets(gyroOffset_1000dps_xyz);
     
     /* Convert offsets to the current accelerometer and gyroscope full scale settings */
-    offset_ax = offset_ax_32g / accel_offset_scale + 0.5;
-    offset_ay = offset_ay_32g / accel_offset_scale + 0.5;
-    offset_az = offset_az_32g / accel_offset_scale + 0.5;
-    offset_gx = offset_gx_1000dps / gyro_offset_scale + 0.5;
-    offset_gy = offset_gy_1000dps / gyro_offset_scale + 0.5;
-    offset_gz = offset_gz_1000dps / gyro_offset_scale + 0.5;
+    offset_ax = accelOffset_32g_xyz[0] / accel_offset_scale + 0.5;
+    offset_ay = accelOffset_32g_xyz[1] / accel_offset_scale + 0.5;
+    offset_az = accelOffset_32g_xyz[2] / accel_offset_scale + 0.5;
+    offset_gx = gyroOffset_1000dps_xyz[0] / gyro_offset_scale + 0.5;
+    offset_gy = gyroOffset_1000dps_xyz[1] / gyro_offset_scale + 0.5;
+    offset_gz = gyroOffset_1000dps_xyz[2] / gyro_offset_scale + 0.5;
     
     static uint16_t step = 0;
     while (1) {
@@ -613,32 +621,32 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
         offset_gz -= mean_gz;
         
         /* Before writing the offsets to the registers, they need need to be converted to 32g accelerometer full scale and 1000dps gyroscope full scale */
-        offset_ax_32g = offset_ax * accel_offset_scale + 0.5;
-        offset_ay_32g = offset_ay * accel_offset_scale + 0.5;
-        offset_az_32g = offset_az * accel_offset_scale + 0.5;
-        offset_gx_1000dps = offset_gx * gyro_offset_scale + 0.5;
-        offset_gy_1000dps = offset_gy * gyro_offset_scale + 0.5;
-        offset_gz_1000dps = offset_gz * gyro_offset_scale + 0.5;
+        accelOffset_32g_xyz[0] = offset_ax * accel_offset_scale + 0.5;
+        accelOffset_32g_xyz[1] = offset_ay * accel_offset_scale + 0.5;
+        accelOffset_32g_xyz[2] = offset_az * accel_offset_scale + 0.5;
+        gyroOffset_1000dps_xyz[0] = offset_gx * gyro_offset_scale + 0.5;
+        gyroOffset_1000dps_xyz[1] = offset_gy * gyro_offset_scale + 0.5;
+        gyroOffset_1000dps_xyz[2] = offset_gz * gyro_offset_scale + 0.5;
         
-        set_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
-        set_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
+        set_accel_offsets(accelOffset_32g_xyz);
+        set_gyro_offsets(gyroOffset_1000dps_xyz);
         
         step++;
     }
     
-    DEBUG_PRINTLN(F("Updated internal sensor offsets:"));
+    DEBUG_PRINTLN(F("Updated internal accelerometer and gyroscope offsets:"));
     DEBUG_PRINT("a/g:\t");
-    DEBUG_PRINT(offset_ax_32g);
+    DEBUG_PRINT(accelOffset_32g_xyz[0]);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_ay_32g);
+    DEBUG_PRINT(accelOffset_32g_xyz[1]);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_az_32g);
+    DEBUG_PRINT(accelOffset_32g_xyz[2]);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gx_1000dps);
+    DEBUG_PRINT(gyroOffset_1000dps_xyz[0]);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gy_1000dps);
+    DEBUG_PRINT(gyroOffset_1000dps_xyz[1]);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gz_1000dps);
+    DEBUG_PRINT(gyroOffset_1000dps_xyz[2]);
     DEBUG_PRINTLN();
     
     DEBUG_PRINTLN(F("Mean measurement error:"));
@@ -669,15 +677,13 @@ bool ICM20948::calibrate_accel_gyro(volatile bool &imuInterrupt, float time_s, i
  * @param[in] imuInterrupt imu interrupt flag
  * @param[in] time_s Time period in seconds for mean value calculation
  * @param[in] gyro_tolerance_1000dps Maximum gyroscope mean value deviation from zero in 1000dps full scale format
- * @param[out] offset_gx_1000dps Gyroscope X axis offset in current full scale format.
- * @param[out] offset_gy_1000dps Gyroscope Y axis offset in current full scale format.
- * @param[out] offset_gz_1000dps Gyroscope Z axis offset in current full scale format.
+ * @param[out] gyroOffset_1000dps_xyz Gyroscope XYZ axis offsets in current full scale format.
  *
  * @return
  *   'true' if successful,
  *   'false' on error.
  */
-bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps, int16_t &offset_gx_1000dps, int16_t &offset_gy_1000dps, int16_t &offset_gz_1000dps) {
+bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t gyro_tolerance_1000dps, int16_t *gyroOffset_1000dps_xyz) {
     /* Scale factor to convert gyroscope values into 1000dps full scale */
     float gyro_offset_scale = (m_gyroRes * 32768.0f) / 1000;
     
@@ -689,21 +695,12 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
     
     DEBUG_PRINTLN(F("Calibrating gyroscope. Keep device at rest ..."));
     
-    get_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
-    
-    /*DEBUG_PRINTLN(F("Internal sensor offsets:"));
-    DEBUG_PRINT("g:\t");
-    DEBUG_PRINT(offset_gx_1000dps);
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gy_1000dps);
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gz_1000dps);
-    DEBUG_PRINTLN();*/
+    get_gyro_offsets(gyroOffset_1000dps_xyz);
     
     /* Convert offsets to the current gyroscope full scale setting */
-    offset_gx = offset_gx_1000dps / gyro_offset_scale + 0.5;
-    offset_gy = offset_gy_1000dps / gyro_offset_scale + 0.5;
-    offset_gz = offset_gz_1000dps / gyro_offset_scale + 0.5;
+    offset_gx = gyroOffset_1000dps_xyz[0] / gyro_offset_scale + 0.5;
+    offset_gy = gyroOffset_1000dps_xyz[1] / gyro_offset_scale + 0.5;
+    offset_gz = gyroOffset_1000dps_xyz[2] / gyro_offset_scale + 0.5;
     
     static uint16_t step = 0;
     while (1) {
@@ -720,22 +717,22 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
         offset_gz -= mean_gz;
         
         /* Before writing the offsets to the registers, they need need to be converted to 1000dps gyroscope full scale */
-        offset_gx_1000dps = offset_gx * gyro_offset_scale + 0.5;
-        offset_gy_1000dps = offset_gy * gyro_offset_scale + 0.5;
-        offset_gz_1000dps = offset_gz * gyro_offset_scale + 0.5;
+        gyroOffset_1000dps_xyz[0] = offset_gx * gyro_offset_scale + 0.5;
+        gyroOffset_1000dps_xyz[1] = offset_gy * gyro_offset_scale + 0.5;
+        gyroOffset_1000dps_xyz[2] = offset_gz * gyro_offset_scale + 0.5;
         
-        set_gyro_offsets(offset_gx_1000dps, offset_gy_1000dps, offset_gz_1000dps);
+        set_gyro_offsets(gyroOffset_1000dps_xyz);
         
         step++;
     }
     
-    DEBUG_PRINTLN(F("Updated internal sensor offsets:"));
+    DEBUG_PRINTLN(F("Updated internal gyroscope offsets:"));
     DEBUG_PRINT("g:\t");
-    DEBUG_PRINT(offset_gx_1000dps);
+    DEBUG_PRINT(gyroOffset_1000dps_xyz[0]);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gy_1000dps);
+    DEBUG_PRINT(gyroOffset_1000dps_xyz[1]);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_gz_1000dps);
+    DEBUG_PRINT(gyroOffset_1000dps_xyz[2]);
     DEBUG_PRINTLN();
     
     DEBUG_PRINTLN(F("Mean measurement error:"));
@@ -761,15 +758,13 @@ bool ICM20948::calibrate_gyro(volatile bool &imuInterrupt, float time_s, int32_t
  * @param[in] time_s Time period in seconds for mean value calculation
  * @param[in] accel_tolerance_32g Maximum accelerometer mean value deviation from target value in 32g full scale format. The accelerometer
  * target values in x and y direction are zero and in z direction it is the acceleration due to gravity.
- * @param[out] offset_ax_32g Accelerometer X axis offset in current full scale format.
- * @param[out] offset_ay_32g Accelerometer Y axis offset in current full scale format.
- * @param[out] offset_az_32g Accelerometer Z axis offset in current full scale format.
+ * @param[out] accelOffset_32g_xyz Accelerometer XYZ axis offsets in current full scale format.
  *
  * @return
  *   'true' if successful,
  *   'false' on error.
  */
-bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int16_t &offset_ax_32g, int16_t &offset_ay_32g, int16_t &offset_az_32g) {
+bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_t accel_tolerance_32g, int16_t *accelOffset_32g_xyz) {
     /* Scale factor to convert accelerometer values into 32g full scale */
     float accel_offset_scale = (m_accelRes * 32768.0f) / 32;
     
@@ -781,21 +776,12 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
     
     DEBUG_PRINTLN(F("Calibrating accelerometer. Keep device at rest and in level ..."));
     
-    get_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
-    
-    /*DEBUG_PRINTLN(F("Internal sensor offsets:"));
-    DEBUG_PRINT("a:\t");
-    DEBUG_PRINT(offset_ax_32g);
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_ay_32g);
-    DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_az_32g);
-    DEBUG_PRINTLN();*/
+    get_accel_offsets(accelOffset_32g_xyz);
     
     /* Convert offsets to the current accelerometer full scale settings */
-    offset_ax = offset_ax_32g / accel_offset_scale + 0.5;
-    offset_ay = offset_ay_32g / accel_offset_scale + 0.5;
-    offset_az = offset_az_32g / accel_offset_scale + 0.5;
+    offset_ax = accelOffset_32g_xyz[0] / accel_offset_scale + 0.5;
+    offset_ay = accelOffset_32g_xyz[1] / accel_offset_scale + 0.5;
+    offset_az = accelOffset_32g_xyz[2] / accel_offset_scale + 0.5;
       
     static uint16_t step = 0;
     while (1) {
@@ -812,22 +798,22 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
         offset_az -= mean_az - m_g;
         
         /* Before writing the offsets to the registers, they need need to be converted to 32g accelerometer full scale */
-        offset_ax_32g = offset_ax * accel_offset_scale + 0.5;
-        offset_ay_32g = offset_ay * accel_offset_scale + 0.5;
-        offset_az_32g = offset_az * accel_offset_scale + 0.5;
+        accelOffset_32g_xyz[0] = offset_ax * accel_offset_scale + 0.5;
+        accelOffset_32g_xyz[1] = offset_ay * accel_offset_scale + 0.5;
+        accelOffset_32g_xyz[2] = offset_az * accel_offset_scale + 0.5;
         
-        set_accel_offsets(offset_ax_32g, offset_ay_32g, offset_az_32g);
+        set_accel_offsets(accelOffset_32g_xyz);
         
         step++;
     }
     
-    DEBUG_PRINTLN(F("Updated internal sensor offsets:"));
+    DEBUG_PRINTLN(F("Updated internal accelerometer offsets:"));
     DEBUG_PRINT("a:\t");
-    DEBUG_PRINT(offset_ax_32g);
+    DEBUG_PRINT(accelOffset_32g_xyz[0]);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_ay_32g);
+    DEBUG_PRINT(accelOffset_32g_xyz[1]);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT(offset_az_32g);
+    DEBUG_PRINT(accelOffset_32g_xyz[2]);
     DEBUG_PRINTLN();
     
     DEBUG_PRINTLN(F("Mean measurement error:"));
@@ -852,25 +838,21 @@ bool ICM20948::calibrate_accel(volatile bool &imuInterrupt, float time_s, int32_
  * @param[in]  time_s Time period in seconds for minimum and maximum value calculation
  * @param[in]  mag_minimumRange Minimum range (maximum - minimum value) for all directions. 
  *             if the range is smaller than the minimum range, the time period starts again.
- * @param[out] offset_mx Magnetometer X axis hard iron distortion correction.
- * @param[out] offset_my Magnetometer Y axis hard iron distortion correction.
- * @param[out] offset_mz Magnetometer Z axis hard iron distortion correction.
- * @param[out] scale_mx Magnetometer X axis soft iron distortion correction.
- * @param[out] scale_my Magnetometer Y axis soft iron distortion correction.
- * @param[out] scale_mz Magnetometer Z axis soft iron distortion correction.
+ * @param[out] magOffset_xyz Magnetometer XYZ axis hard iron distortion corrections.
+ * @param[out] magScale_xyz Magnetometer XYZ axis soft iron distortion corrections.
  *
  * @return
  *   'true' if successful,
  *   'false' on error.
  */
-bool ICM20948::calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange, float &offset_mx, float &offset_my, float &offset_mz, float &scale_mx, float &scale_my, float &scale_mz) {
+bool ICM20948::calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t mag_minimumRange, float *magOffset_xyz, float *magScale_xyz) {
     int16_t min_mx, max_mx, min_my, max_my, min_mz, max_mz;
     int32_t sum_mx, sum_my, sum_mz;
     int32_t dif_mx, dif_my, dif_mz, dif_m;
     
     /* Reset hard and soft iron correction before calibration. */
-    m_offset_mx = 0; m_offset_my = 0; m_offset_mz = 0;
-    m_scale_mx = 1; m_scale_my = 1; m_scale_mz = 1;
+    m_magOffset_xyz[0] = 0; m_magOffset_xyz[1] = 0; m_magOffset_xyz[2] = 0;
+    m_magScale_xyz[0] = 1; m_magScale_xyz[1] = 1; m_magScale_xyz[2] = 1;
     
     DEBUG_PRINTLN(F("Calibrating magnetometer. Move the device in a figure eight ..."));
     
@@ -884,35 +866,35 @@ bool ICM20948::calibrate_mag(volatile bool &imuInterrupt, float time_s, int32_t 
     dif_my = (int32_t) max_my - min_my;
     dif_mz = (int32_t) max_mz - min_mz;
     
-    offset_mx = -0.5f * sum_mx;
-    offset_my = -0.5f * sum_my;
-    offset_mz = -0.5f * sum_mz;
+    magOffset_xyz[0] = -0.5f * sum_mx;
+    magOffset_xyz[1] = -0.5f * sum_my;
+    magOffset_xyz[2] = -0.5f * sum_mz;
     
     dif_m = (dif_mx + dif_my + dif_mz) / 3;
     
-    scale_mx = (float) dif_m / dif_mx;
-    scale_my = (float) dif_m / dif_my;
-    scale_mz = (float) dif_m / dif_mz;
+    magScale_xyz[0] = (float) dif_m / dif_mx;
+    magScale_xyz[1] = (float) dif_m / dif_my;
+    magScale_xyz[2] = (float) dif_m / dif_mz;
     
     /* Apply calibration result. */
-    m_offset_mx = offset_mx; m_offset_my = offset_my; m_offset_mz = offset_mz;
-    m_scale_mx = scale_mx; m_scale_my = scale_my; m_scale_mz = scale_mz;
+    m_magOffset_xyz[0] = magOffset_xyz[0]; m_magOffset_xyz[1] = magOffset_xyz[1]; m_magOffset_xyz[2] = magOffset_xyz[2];
+    m_magScale_xyz[0] = magScale_xyz[0]; m_magScale_xyz[1] = magScale_xyz[1]; m_magScale_xyz[2] = magScale_xyz[2];
     
-    DEBUG_PRINTLN(F("Hard iron correction values (center values):"));
-    DEBUG_PRINT2(offset_mx, 1);
+    DEBUG_PRINTLN(F("Updated magnetometer offsets:"));
+    DEBUG_PRINT2(magOffset_xyz[0], 1);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT2(offset_my, 1);
+    DEBUG_PRINT2(magOffset_xyz[1], 1);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT2(offset_mz, 1);
+    DEBUG_PRINT2(magOffset_xyz[2], 1);
     DEBUG_PRINT("\t");
     DEBUG_PRINTLN();
 
-    DEBUG_PRINTLN(F("Soft iron correction values (scale values):"));
-    DEBUG_PRINT2(scale_mx, 4);
+    DEBUG_PRINTLN(F("Updated magnetometer scalings:"));
+    DEBUG_PRINT2(magScale_xyz[0], 4);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT2(scale_my, 4);
+    DEBUG_PRINT2(magScale_xyz[1], 4);
     DEBUG_PRINT("\t");
-    DEBUG_PRINT2(scale_mz, 4);
+    DEBUG_PRINT2(magScale_xyz[2], 4);
     DEBUG_PRINTLN();
     
     return true;
@@ -1402,15 +1384,13 @@ uint32_t ICM20948::set_mag_mode(uint8_t magMode){
  * @brief
  *    Set accelerometer offsets
  *
- * @param[in] offset_ax Accelerometer x offset
- * @param[in] offset_ay Accelerometer y offset
- * @param[in] offset_ay Accelerometer z offset
+ * @param[in] accelOffset_xyz Accelerometer XYZ axis offsets
  *
  * @return
  *    'OK' if successful,
  *    'ERROR' on error.
  ******************************************************************************/
-uint32_t ICM20948::set_accel_offsets(int16_t offset_ax, int16_t offset_ay, int16_t offset_az) {
+uint32_t ICM20948::set_accel_offsets(const int16_t * const accelOffset_xyz) {
     static uint8_t data[3];
     
     /* Bit 0 of the LSB offset register must be preserved, since it is used for temperature compensation calculations (? the data sheet is not clear). */
@@ -1423,14 +1403,14 @@ uint32_t ICM20948::set_accel_offsets(int16_t offset_ax, int16_t offset_ay, int16
     read_register(ICM20948_REG_ZA_OFFSET_L, 1, &data[2]);
     
     /* Write x offset to registers */
-    write_register(ICM20948_REG_XA_OFFSET_H, (uint8_t) ((offset_ax >> 7) & 0xFF));
-    write_register(ICM20948_REG_XA_OFFSET_L, (uint8_t) (((offset_ax << 1) & 0xFF) | (data[0] & 0x01)));
+    write_register(ICM20948_REG_XA_OFFSET_H, (uint8_t) ((accelOffset_xyz[0] >> 7) & 0xFF));
+    write_register(ICM20948_REG_XA_OFFSET_L, (uint8_t) (((accelOffset_xyz[0] << 1) & 0xFF) | (data[0] & 0x01)));
     /* Write y offset to registers */
-    write_register(ICM20948_REG_YA_OFFSET_H, (uint8_t) ((offset_ay >> 7) & 0xFF));
-    write_register(ICM20948_REG_YA_OFFSET_L, (uint8_t) (((offset_ay << 1) & 0xFF) | (data[1] & 0x01)));
+    write_register(ICM20948_REG_YA_OFFSET_H, (uint8_t) ((accelOffset_xyz[1] >> 7) & 0xFF));
+    write_register(ICM20948_REG_YA_OFFSET_L, (uint8_t) (((accelOffset_xyz[1] << 1) & 0xFF) | (data[1] & 0x01)));
     /* Write z offset to registers */
-    write_register(ICM20948_REG_ZA_OFFSET_H, (uint8_t) ((offset_az >> 7) & 0xFF));
-    write_register(ICM20948_REG_ZA_OFFSET_L, (uint8_t) (((offset_az << 1) & 0xFF) | (data[2] & 0x01)));
+    write_register(ICM20948_REG_ZA_OFFSET_H, (uint8_t) ((accelOffset_xyz[2] >> 7) & 0xFF));
+    write_register(ICM20948_REG_ZA_OFFSET_L, (uint8_t) (((accelOffset_xyz[2] << 1) & 0xFF) | (data[2] & 0x01)));
     
     return OK;
 }
@@ -1439,24 +1419,22 @@ uint32_t ICM20948::set_accel_offsets(int16_t offset_ax, int16_t offset_ay, int16
  * @brief
  *    Set gyroscope offsets
  *
- * @param[in] gyroOffsets Gyroscope x offset
- * @param[in] gyroOffsets Gyroscope y offset
- * @param[in] gyroOffsets Gyroscope z offset
+ * @param[in] gyroOffset_xyz Gyroscope XYZ axis offsets
  *
  * @return
  *    'OK' if successful,
  *    'ERROR' on error.
  ******************************************************************************/
-uint32_t ICM20948::set_gyro_offsets(int16_t offset_gx, int16_t offset_gy, int16_t offset_gz) {
+uint32_t ICM20948::set_gyro_offsets(const int16_t * const gyroOffset_xyz) {
     /* Write x offset to registers */
-    write_register(ICM20948_REG_XG_OFFS_USRH, (uint8_t) (offset_gx >> 8));
-    write_register(ICM20948_REG_XG_OFFS_USRL, (uint8_t) (offset_gx & 0xFF));
+    write_register(ICM20948_REG_XG_OFFS_USRH, (uint8_t) (gyroOffset_xyz[0] >> 8));
+    write_register(ICM20948_REG_XG_OFFS_USRL, (uint8_t) (gyroOffset_xyz[0] & 0xFF));
     /* Write y offset to registers */
-    write_register(ICM20948_REG_YG_OFFS_USRH, (uint8_t) (offset_gy >> 8));
-    write_register(ICM20948_REG_YG_OFFS_USRL, (uint8_t) (offset_gy & 0xFF));
+    write_register(ICM20948_REG_YG_OFFS_USRH, (uint8_t) (gyroOffset_xyz[1] >> 8));
+    write_register(ICM20948_REG_YG_OFFS_USRL, (uint8_t) (gyroOffset_xyz[1] & 0xFF));
     /* Write z offset to registers */
-    write_register(ICM20948_REG_ZG_OFFS_USRH, (uint8_t) (offset_gz >> 8));
-    write_register(ICM20948_REG_ZG_OFFS_USRL, (uint8_t) (offset_gz & 0xFF));
+    write_register(ICM20948_REG_ZG_OFFS_USRH, (uint8_t) (gyroOffset_xyz[2] >> 8));
+    write_register(ICM20948_REG_ZG_OFFS_USRL, (uint8_t) (gyroOffset_xyz[2] & 0xFF));
     
     return OK;
 }
@@ -1543,15 +1521,13 @@ uint32_t ICM20948::get_gyro_resolution(float &gyroRes) {
  * @brief
  *    Get accelerometer offsets
  *
- * @param[out] offset_ax Accelerometer x offset
- * @param[out] offset_ay Accelerometer y offset
- * @param[out] offset_az Accelerometer z offset
+ * @param[out] accelOffset_xyz Accelerometer XYZ axis offsets
  *
  * @return
  *    'OK' if successful,
  *    'ERROR' on error.
  ******************************************************************************/
-uint32_t ICM20948::get_accel_offsets(int16_t &offset_ax, int16_t &offset_ay, int16_t &offset_az) {
+uint32_t ICM20948::get_accel_offsets(int16_t *accelOffset_xyz) {
     static uint8_t data[6];
     
     /* Read x offset registers into a data array */
@@ -1562,9 +1538,9 @@ uint32_t ICM20948::get_accel_offsets(int16_t &offset_ax, int16_t &offset_ay, int
     read_register(ICM20948_REG_ZA_OFFSET_H, 2, &data[4]);
     
     /* Convert the MSB and LSB into a signed 16-bit value */
-    offset_ax = ((uint16_t) data[0] << 7) | (data[1] >> 1);
-    offset_ay = ((uint16_t) data[2] << 7) | (data[3] >> 1);
-    offset_az = ((uint16_t) data[4] << 7) | (data[5] >> 1);
+    accelOffset_xyz[0] = ((uint16_t) data[0] << 7) | (data[1] >> 1);
+    accelOffset_xyz[1] = ((uint16_t) data[2] << 7) | (data[3] >> 1);
+    accelOffset_xyz[2] = ((uint16_t) data[4] << 7) | (data[5] >> 1);
     
     return OK;
 }
@@ -1573,15 +1549,13 @@ uint32_t ICM20948::get_accel_offsets(int16_t &offset_ax, int16_t &offset_ay, int
  * @brief
  *    Get gyroscope offsets
  *
- * @param[out] offset_gx Gyroscope x offset
- * @param[out] offset_gy Gyroscope y offset
- * @param[out] offset_gz Gyroscope z offset
+ * @param[out] gyroOffset_xyz Gyroscope XYZ axis offsets
  *
  * @return
  *    'OK' if successful,
  *    'ERROR' on error.
  ******************************************************************************/
-uint32_t ICM20948::get_gyro_offsets(int16_t &offset_gx, int16_t &offset_gy, int16_t &offset_gz) {
+uint32_t ICM20948::get_gyro_offsets(int16_t *gyroOffset_xyz) {
     static uint8_t data[6];
     
     /* Read x raw data registers into a data array */
@@ -1592,9 +1566,9 @@ uint32_t ICM20948::get_gyro_offsets(int16_t &offset_gx, int16_t &offset_gy, int1
     read_register(ICM20948_REG_ZG_OFFS_USRH, 2, &data[4]);
         
     /* Convert the MSB and LSB into a signed 16-bit value */
-    offset_gx = ((uint16_t) data[0] << 8) | data[1];
-    offset_gy = ((uint16_t) data[2] << 8) | data[3];
-    offset_gz = ((uint16_t) data[4] << 8) | data[5];
+    gyroOffset_xyz[0] = ((uint16_t) data[0] << 8) | data[1];
+    gyroOffset_xyz[1] = ((uint16_t) data[2] << 8) | data[3];
+    gyroOffset_xyz[2] = ((uint16_t) data[4] << 8) | data[5];
     
     return OK;
 }
@@ -1962,7 +1936,7 @@ uint32_t ICM20948::min_max_mag(volatile bool &imuInterrupt, float time_s, int32_
                 }
                 
                 // run serial print at a rate independent of the main loop
-                static uint32_t t0_serial = micros();
+                static uint32_t t0_serial = 0;
                 if (micros() - t0_serial > 16666) {
 			        t0_serial = micros();
                     DEBUG_PRINT(min_mx); DEBUG_PRINT("\t"); DEBUG_PRINT(min_my); DEBUG_PRINT("\t"); DEBUG_PRINTLN(min_mz);
