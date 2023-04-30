@@ -30,7 +30,7 @@ const float RAD2DEG = (float) 4068 / 71;
 // Debug output is now working even on ATMega328P MCUs (e.g. Arduino Uno)
 // after moving string constants to flash memory storage using the F()
 // compiler macro (Arduino IDE 1.0+ required).
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define DEBUG_PRINT(x) Serial.print(x)
